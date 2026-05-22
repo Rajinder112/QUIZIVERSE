@@ -16,10 +16,24 @@ wss.on('connection', (ws) => {
   let clientId = null;
   let clientRole = null;
 
+  console.log('[WS Server] New connection established.');
+
   ws.on('message', (message) => {
     try {
-      const data = JSON.parse(message);
+      // Decode Buffer or array to string
+      let messageStr;
+      if (Buffer.isBuffer(message)) {
+        messageStr = message.toString('utf-8');
+      } else if (typeof message === 'string') {
+        messageStr = message;
+      } else {
+        messageStr = message.toString();
+      }
+
+      const data = JSON.parse(messageStr);
       const { type, roomCode, role, playerId, payload, senderId } = data;
+
+      console.log(`[WS Receive] Type: ${type}, Room: ${roomCode || clientRoom}, Sender: ${senderId || playerId || clientId}`);
 
       if (type === 'REGISTER') {
         clientRoom = roomCode;
@@ -30,7 +44,7 @@ wss.on('connection', (ws) => {
           rooms.set(roomCode, new Set());
         }
         rooms.get(roomCode).add(ws);
-        console.log(`Client registered: Room ${roomCode}, Role ${role}, ID ${playerId}`);
+        console.log(`[WS Register] Registered: Room ${roomCode}, Role ${role}, ID ${playerId}`);
         return;
       }
 
@@ -44,34 +58,40 @@ wss.on('connection', (ws) => {
           senderId: senderId || clientId
         });
 
+        let relayCount = 0;
         clients.forEach((client) => {
           if (client !== ws && client.readyState === WebSocket.OPEN) {
             client.send(msgToSend);
+            relayCount++;
           }
         });
+        console.log(`[WS Relay] Relayed ${type} from ${senderId || clientId} to ${relayCount} other client(s) in Room ${targetRoom}`);
+      } else {
+        console.log(`[WS Warning] Target room "${targetRoom}" not found or empty for message type ${type}`);
       }
     } catch (err) {
-      console.error('Error handling WebSocket message:', err);
+      console.error('[WS Error] Error handling WebSocket message:', err);
     }
   });
 
   ws.on('close', () => {
+    console.log(`[WS Server] Connection closed. Room: ${clientRoom}, ID: ${clientId}`);
     if (clientRoom && rooms.has(clientRoom)) {
       const clients = rooms.get(clientRoom);
       clients.delete(ws);
       if (clients.size === 0) {
         rooms.delete(clientRoom);
-        console.log(`Room ${clientRoom} deleted (empty)`);
+        console.log(`[WS Room] Room ${clientRoom} deleted (empty)`);
       } else {
-        console.log(`Client disconnected from Room ${clientRoom}. Remaining clients: ${clients.size}`);
+        console.log(`[WS Room] Client disconnected from Room ${clientRoom}. Remaining: ${clients.size}`);
       }
     }
   });
 });
 
-// Upgrade HTTP connection to WebSocket on /ws
+// Upgrade HTTP connection to WebSocket on /ws (safe pathname parsing)
 server.on('upgrade', (request, socket, head) => {
-  const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
+  const pathname = request.url ? request.url.split('?')[0] : '';
 
   if (pathname === '/ws') {
     wss.handleUpgrade(request, socket, head, (ws) => {

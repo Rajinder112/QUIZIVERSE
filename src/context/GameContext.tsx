@@ -276,10 +276,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Connect to the WebSocket room
   const connectWebSocket = (code: string, role: UserRole, pid?: string, name?: string) => {
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+      console.log('[WS Client] Already connected or connecting, skipping connect.');
       return;
     }
     if (wsRef.current) {
       try {
+        console.log('[WS Client] Closing existing socket reference before reconnecting.');
         wsRef.current.close();
       } catch (e) {
         console.error(e);
@@ -289,12 +291,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws`;
     
-    console.log('Connecting to WebSocket:', wsUrl);
+    console.log('[WS Client] Connecting to WebSocket:', wsUrl);
     const socket = new WebSocket(wsUrl);
     wsRef.current = socket;
 
     socket.onopen = () => {
-      console.log('WebSocket connected for room', code, 'as', role);
+      console.log(`[WS Client] Connected. Registering Room: ${code}, Role: ${role}, PID: ${pid}`);
       socket.send(JSON.stringify({
         type: 'REGISTER',
         roomCode: code,
@@ -304,13 +306,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // If player, also send PLAYER_JOIN message immediately on connect
       if (role === 'player' && (pid || playerId || stateRef.current.playerId)) {
+        const pNickname = name || nickname || stateRef.current.nickname;
+        const pPlayerId = pid || playerId || stateRef.current.playerId;
+        console.log(`[WS Client] Sending PLAYER_JOIN. Nickname: ${pNickname}, PID: ${pPlayerId}`);
         socket.send(JSON.stringify({
           type: 'PLAYER_JOIN',
           roomCode: code,
-          senderId: pid || playerId || stateRef.current.playerId,
+          senderId: pPlayerId,
           payload: { 
-            id: pid || playerId || stateRef.current.playerId, 
-            nickname: name || nickname || stateRef.current.nickname, 
+            id: pPlayerId, 
+            nickname: pNickname, 
             roomCode: code 
           }
         }));
@@ -322,26 +327,34 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = JSON.parse(event.data);
         const { type, payload, senderId } = data;
         
+        console.log(`[WS Client] Received message type: ${type} from ${senderId}`);
+
         // Skip messages sent by ourselves if echoed by server
-        if (senderId === (pid || playerId || stateRef.current.playerId)) return;
+        const myId = pid || playerId || stateRef.current.playerId;
+        if (senderId && senderId === myId) {
+          console.log('[WS Client] Skipping echoed message from self.');
+          return;
+        }
 
         handleIncomingMessage(type, payload);
       } catch (err) {
-        console.error('Error parsing WebSocket message', err);
+        console.error('[WS Client] Error parsing WebSocket message', err);
       }
     };
 
-    socket.onclose = () => {
-      console.log('WebSocket disconnected, reconnecting...');
+    socket.onclose = (event) => {
+      console.log('[WS Client] Disconnected.', event);
+      // Reconnect fallback only if the session is still active
       setTimeout(() => {
-        if (stateRef.current.roomCode === code) {
+        if (stateRef.current.roomCode === code && stateRef.current.userRole === role) {
+          console.log('[WS Client] Session active, attempting reconnect...');
           connectWebSocket(code, role, pid, name);
         }
       }, 3000);
     };
 
     socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error('[WS Client] WebSocket error:', error);
     };
   };
 
@@ -373,11 +386,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
+    };
+  }, []);
+
+  // Manage declarative WebSocket connection based on roomCode and userRole
+  useEffect(() => {
+    if (roomCode && userRole) {
+      console.log(`[WS Client useEffect] RoomCode or UserRole active. Connecting to WS. RoomCode: ${roomCode}, UserRole: ${userRole}`);
+      connectWebSocket(roomCode, userRole, playerId || undefined, nickname || undefined);
+    }
+    return () => {
       if (wsRef.current) {
+        console.log('[WS Client useEffect] Cleanup: Room deactivated or component unmounted. Closing socket.');
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
-  }, [roomCode, userRole, playerId, currentQuiz]);
+  }, [roomCode, userRole]);
 
   // Host state update broadcast periodic sync
   useEffect(() => {
@@ -567,12 +592,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAnswersCount(0);
     setCurrentQuestionIndex(0);
 
-    // Set stateRef immediately so that connectWebSocket knows them
+    // Set stateRef immediately so that components/useEffect know them
     stateRef.current.roomCode = code;
     stateRef.current.userRole = 'host';
-
-    // Connect WebSocket
-    connectWebSocket(code, 'host');
+    stateRef.current.gameState = 'lobby';
   };
 
   const joinLobby = (joinPin: string, name: string): boolean => {
@@ -586,14 +609,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setFeedback(null);
     setHasAnswered(false);
 
-    // Set stateRef immediately so that connectWebSocket knows them
+    // Set stateRef immediately so that components/useEffect know them
     stateRef.current.playerId = pid;
     stateRef.current.nickname = name;
     stateRef.current.roomCode = joinPin;
     stateRef.current.userRole = 'player';
-
-    // Connect WebSocket
-    connectWebSocket(joinPin, 'player', pid, name);
+    stateRef.current.gameState = 'lobby';
 
     setGameState('lobby');
     return true;
