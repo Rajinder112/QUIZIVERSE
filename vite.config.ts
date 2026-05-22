@@ -9,8 +9,22 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/ws': {
+        target: 'http://localhost:3000',
+        ws: true
+      }
+    }
+  },
   preview: {
     port: process.env.PORT ? parseInt(process.env.PORT) : 4173,
-    host: true
+    host: true,
+    proxy: {
+      '/ws': {
+        target: 'http://localhost:3000',
+        ws: true
+      }
+    }
   }
 })

@@ -155,13 +155,195 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // References to keep state available in event handlers and timers
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
-  const stateRef = useRef({ gameState, players, currentQuestionIndex, currentQuiz, timer, hasAnswered });
+  const stateRef = useRef({ 
+    gameState, 
+    players, 
+    currentQuestionIndex, 
+    currentQuiz, 
+    timer, 
+    hasAnswered, 
+    roomCode, 
+    userRole, 
+    playerId,
+    nickname
+  });
 
   // Sync ref values
   useEffect(() => {
-    stateRef.current = { gameState, players, currentQuestionIndex, currentQuiz, timer, hasAnswered };
-  }, [gameState, players, currentQuestionIndex, currentQuiz, timer, hasAnswered]);
+    stateRef.current = { 
+      gameState, 
+      players, 
+      currentQuestionIndex, 
+      currentQuiz, 
+      timer, 
+      hasAnswered, 
+      roomCode, 
+      userRole, 
+      playerId,
+      nickname
+    };
+  }, [gameState, players, currentQuestionIndex, currentQuiz, timer, hasAnswered, roomCode, userRole, playerId, nickname]);
+
+  // Helper to send messages over BroadcastChannel AND WebSocket
+  const sendMessage = (type: string, payload: any) => {
+    // 1. Send to local BroadcastChannel
+    broadcastChannelRef.current?.postMessage({ type, payload });
+
+    // 2. Send to WebSocket if connected
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type,
+        roomCode: stateRef.current.roomCode || roomCode,
+        senderId: stateRef.current.playerId || playerId,
+        payload
+      }));
+    }
+  };
+
+  // Helper to handle incoming messages from either channel
+  const handleIncomingMessage = (type: string, payload: any) => {
+    switch (type) {
+      case 'PLAYER_JOIN':
+        if (stateRef.current.gameState === 'lobby') {
+          handleHostPlayerJoin(payload);
+        }
+        break;
+
+      case 'SUBMIT_ANSWER':
+        if (stateRef.current.gameState === 'playing') {
+          handleHostAnswerSubmission(payload);
+        }
+        break;
+
+      case 'GAME_STARTED':
+        if (stateRef.current.gameState === 'lobby' && payload.roomCode === stateRef.current.roomCode) {
+          setGameState('playing');
+          setCurrentQuestionIndex(0);
+          setTimer(30);
+          setHasAnswered(false);
+          setFeedback(null);
+        }
+        break;
+
+      case 'NEXT_QUESTION':
+        if (payload.roomCode === stateRef.current.roomCode) {
+          setGameState('playing');
+          setCurrentQuestionIndex(payload.questionIndex);
+          setTimer(30);
+          setHasAnswered(false);
+          setFeedback(null);
+        }
+        break;
+
+      case 'SHOW_LEADERBOARD':
+        if (payload.roomCode === stateRef.current.roomCode) {
+          setPlayers(payload.players);
+          const me = payload.players.find((p: Player) => p.id === stateRef.current.playerId);
+          if (me) {
+            setScore(me.score);
+          }
+          setGameState('leaderboard');
+        }
+        break;
+
+      case 'GAME_OVER':
+        if (payload.roomCode === stateRef.current.roomCode) {
+          setPlayers(payload.players);
+          const me = payload.players.find((p: Player) => p.id === stateRef.current.playerId);
+          if (me) {
+            setScore(me.score);
+          }
+          setGameState('gameover');
+        }
+        break;
+
+      case 'HOST_HEARTBEAT':
+        if (stateRef.current.userRole === 'player' && payload.roomCode === stateRef.current.roomCode) {
+          setPlayers(payload.players);
+          if (!stateRef.current.currentQuiz && payload.currentQuiz) {
+            setCurrentQuiz(payload.currentQuiz);
+          }
+        }
+        break;
+
+      default:
+        break;
+    }
+  };
+
+  // Connect to the WebSocket room
+  const connectWebSocket = (code: string, role: UserRole, pid?: string, name?: string) => {
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+    if (wsRef.current) {
+      try {
+        wsRef.current.close();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    console.log('Connecting to WebSocket:', wsUrl);
+    const socket = new WebSocket(wsUrl);
+    wsRef.current = socket;
+
+    socket.onopen = () => {
+      console.log('WebSocket connected for room', code, 'as', role);
+      socket.send(JSON.stringify({
+        type: 'REGISTER',
+        roomCode: code,
+        role: role,
+        playerId: pid || playerId || stateRef.current.playerId
+      }));
+
+      // If player, also send PLAYER_JOIN message immediately on connect
+      if (role === 'player' && (pid || playerId || stateRef.current.playerId)) {
+        socket.send(JSON.stringify({
+          type: 'PLAYER_JOIN',
+          roomCode: code,
+          senderId: pid || playerId || stateRef.current.playerId,
+          payload: { 
+            id: pid || playerId || stateRef.current.playerId, 
+            nickname: name || nickname || stateRef.current.nickname, 
+            roomCode: code 
+          }
+        }));
+      }
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        const { type, payload, senderId } = data;
+        
+        // Skip messages sent by ourselves if echoed by server
+        if (senderId === (pid || playerId || stateRef.current.playerId)) return;
+
+        handleIncomingMessage(type, payload);
+      } catch (err) {
+        console.error('Error parsing WebSocket message', err);
+      }
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket disconnected, reconnecting...');
+      setTimeout(() => {
+        if (stateRef.current.roomCode === code) {
+          connectWebSocket(code, role, pid, name);
+        }
+      }, 3000);
+    };
+
+    socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+  };
 
   // Load custom quizzes from localStorage on start
   useEffect(() => {
@@ -183,87 +365,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     channel.onmessage = (event) => {
       const { type, payload } = event.data;
-
-      // Handle message based on role
-      switch (type) {
-        case 'PLAYER_JOIN':
-          if (stateRef.current.gameState === 'lobby') {
-            handleHostPlayerJoin(payload);
-          }
-          break;
-
-        case 'SUBMIT_ANSWER':
-          if (stateRef.current.gameState === 'playing') {
-            handleHostAnswerSubmission(payload);
-          }
-          break;
-
-        case 'GAME_STARTED':
-          // Player receives game started event
-          if (stateRef.current.gameState === 'lobby' && payload.roomCode === roomCode) {
-            setGameState('playing');
-            setCurrentQuestionIndex(0);
-            setTimer(30);
-            setHasAnswered(false);
-            setFeedback(null);
-          }
-          break;
-
-        case 'NEXT_QUESTION':
-          // Player receives next question event
-          if (payload.roomCode === roomCode) {
-            setGameState('playing');
-            setCurrentQuestionIndex(payload.questionIndex);
-            setTimer(30);
-            setHasAnswered(false);
-            setFeedback(null);
-          }
-          break;
-
-        case 'SHOW_LEADERBOARD':
-          // Player receives leaderboard event
-          if (payload.roomCode === roomCode) {
-            setPlayers(payload.players);
-            // Find current player score
-            const me = payload.players.find((p: Player) => p.id === playerId);
-            if (me) {
-              setScore(me.score);
-            }
-            setGameState('leaderboard');
-          }
-          break;
-
-        case 'GAME_OVER':
-          // Player receives game over event
-          if (payload.roomCode === roomCode) {
-            setPlayers(payload.players);
-            const me = payload.players.find((p: Player) => p.id === playerId);
-            if (me) {
-              setScore(me.score);
-            }
-            setGameState('gameover');
-          }
-          break;
-
-        case 'HOST_HEARTBEAT':
-          // Players synchronize their roster / quiz info
-          if (userRole === 'player' && payload.roomCode === roomCode) {
-            setPlayers(payload.players);
-            if (!currentQuiz && payload.currentQuiz) {
-              setCurrentQuiz(payload.currentQuiz);
-            }
-          }
-          break;
-
-        default:
-          break;
-      }
+      handleIncomingMessage(type, payload);
     };
 
     return () => {
       channel.close();
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
       }
     };
   }, [roomCode, userRole, playerId, currentQuiz]);
@@ -272,13 +383,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (userRole === 'host' && gameState === 'lobby') {
       const syncInterval = setInterval(() => {
-        broadcastChannelRef.current?.postMessage({
-          type: 'HOST_HEARTBEAT',
-          payload: {
-            roomCode,
-            players: stateRef.current.players,
-            currentQuiz: stateRef.current.currentQuiz
-          }
+        sendMessage('HOST_HEARTBEAT', {
+          roomCode,
+          players: stateRef.current.players,
+          currentQuiz: stateRef.current.currentQuiz
         });
       }, 1000);
       return () => clearInterval(syncInterval);
@@ -287,7 +395,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // --- HOST HANDLERS ---
   const handleHostPlayerJoin = (playerInfo: { id: string; nickname: string; roomCode: string }) => {
-    if (playerInfo.roomCode !== roomCode) return;
+    if (playerInfo.roomCode !== stateRef.current.roomCode && playerInfo.roomCode !== roomCode) return;
 
     setPlayers((prev) => {
       // Check if player already exists
@@ -307,9 +415,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const nextPlayers = [...prev, newPlayer];
 
       // Broadcast list updates immediately
-      broadcastChannelRef.current?.postMessage({
-        type: 'HOST_HEARTBEAT',
-        payload: { roomCode, players: nextPlayers, currentQuiz }
+      sendMessage('HOST_HEARTBEAT', {
+        roomCode: stateRef.current.roomCode || roomCode,
+        players: nextPlayers,
+        currentQuiz: stateRef.current.currentQuiz || currentQuiz
       });
 
       return nextPlayers;
@@ -322,12 +431,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     timeElapsed: number;
     roomCode: string;
   }) => {
-    if (answerInfo.roomCode !== roomCode) return;
+    if (answerInfo.roomCode !== stateRef.current.roomCode && answerInfo.roomCode !== roomCode) return;
 
     setPlayers((prev) => {
       const updated = prev.map((player) => {
         if (player.id === answerInfo.playerId) {
-          const currentQuestion = currentQuiz?.questions[currentQuestionIndex];
+          const currentQuestion = (stateRef.current.currentQuiz || currentQuiz)?.questions[stateRef.current.currentQuestionIndex];
           if (!currentQuestion) return player;
 
           const correct = answerInfo.optionIndex === currentQuestion.correctAnswer;
@@ -341,14 +450,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             score: player.score + scoreEarned,
             lastAnsweredCorrectly: correct,
             lastScoreEarned: scoreEarned,
-            lastQuestionAnswered: currentQuestionIndex
+            lastQuestionAnswered: stateRef.current.currentQuestionIndex
           };
         }
         return player;
       });
 
       // Recalculate answered counts
-      const answeredCount = updated.filter(p => p.lastQuestionAnswered === currentQuestionIndex).length;
+      const answeredCount = updated.filter(p => p.lastQuestionAnswered === stateRef.current.currentQuestionIndex).length;
       setAnswersCount(answeredCount);
 
       // Check if all players (humans + bots) have answered
@@ -423,7 +532,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           playerId: bot.id,
           optionIndex: answerIndex,
           timeElapsed: delay,
-          roomCode: roomCode || ''
+          roomCode: stateRef.current.roomCode || roomCode || ''
         });
 
       }, delay * 1000);
@@ -457,6 +566,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setGameState('lobby');
     setAnswersCount(0);
     setCurrentQuestionIndex(0);
+
+    // Set stateRef immediately so that connectWebSocket knows them
+    stateRef.current.roomCode = code;
+    stateRef.current.userRole = 'host';
+
+    // Connect WebSocket
+    connectWebSocket(code, 'host');
   };
 
   const joinLobby = (joinPin: string, name: string): boolean => {
@@ -470,11 +586,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setFeedback(null);
     setHasAnswered(false);
 
-    // Notify Host via BroadcastChannel
-    broadcastChannelRef.current?.postMessage({
-      type: 'PLAYER_JOIN',
-      payload: { id: pid, nickname: name, roomCode: joinPin },
-    });
+    // Set stateRef immediately so that connectWebSocket knows them
+    stateRef.current.playerId = pid;
+    stateRef.current.nickname = name;
+    stateRef.current.roomCode = joinPin;
+    stateRef.current.userRole = 'player';
+
+    // Connect WebSocket
+    connectWebSocket(joinPin, 'player', pid, name);
 
     setGameState('lobby');
     return true;
@@ -511,9 +630,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const nextPlayers = [...prev, newBot];
 
-      broadcastChannelRef.current?.postMessage({
-        type: 'HOST_HEARTBEAT',
-        payload: { roomCode, players: nextPlayers, currentQuiz }
+      sendMessage('HOST_HEARTBEAT', {
+        roomCode: stateRef.current.roomCode || roomCode,
+        players: nextPlayers,
+        currentQuiz: stateRef.current.currentQuiz || currentQuiz
       });
 
       return nextPlayers;
@@ -523,9 +643,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const removePlayer = (id: string) => {
     setPlayers((prev) => {
       const nextPlayers = prev.filter((p) => p.id !== id);
-      broadcastChannelRef.current?.postMessage({
-        type: 'HOST_HEARTBEAT',
-        payload: { roomCode, players: nextPlayers, currentQuiz }
+      sendMessage('HOST_HEARTBEAT', {
+        roomCode: stateRef.current.roomCode || roomCode,
+        players: nextPlayers,
+        currentQuiz: stateRef.current.currentQuiz || currentQuiz
       });
       return nextPlayers;
     });
@@ -545,9 +666,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
 
       // Broadcast starting game
-      broadcastChannelRef.current?.postMessage({
-        type: 'GAME_STARTED',
-        payload: { roomCode, currentQuiz },
+      sendMessage('GAME_STARTED', {
+        roomCode: stateRef.current.roomCode || roomCode,
+        currentQuiz: stateRef.current.currentQuiz || currentQuiz
       });
 
       return reset;
@@ -583,14 +704,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Send answer to Host
-    broadcastChannelRef.current?.postMessage({
-      type: 'SUBMIT_ANSWER',
-      payload: {
-        playerId,
-        optionIndex,
-        timeElapsed,
-        roomCode,
-      },
+    sendMessage('SUBMIT_ANSWER', {
+      playerId: stateRef.current.playerId || playerId,
+      optionIndex,
+      timeElapsed,
+      roomCode: stateRef.current.roomCode || roomCode,
     });
 
     // Play visual feedback pop
@@ -622,9 +740,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }))
       );
 
-      broadcastChannelRef.current?.postMessage({
-        type: 'NEXT_QUESTION',
-        payload: { roomCode, questionIndex: nextIndex }
+      sendMessage('NEXT_QUESTION', {
+        roomCode: stateRef.current.roomCode || roomCode,
+        questionIndex: nextIndex
       });
 
       setGameState('playing');
@@ -640,9 +758,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     stopCountdown();
 
     // Broadcast current scores
-    broadcastChannelRef.current?.postMessage({
-      type: 'SHOW_LEADERBOARD',
-      payload: { roomCode, players }
+    sendMessage('SHOW_LEADERBOARD', {
+      roomCode: stateRef.current.roomCode || roomCode,
+      players: stateRef.current.players || players
     });
 
     setGameState('leaderboard');
@@ -654,9 +772,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     stopCountdown();
 
     // Broadcast game over
-    broadcastChannelRef.current?.postMessage({
-      type: 'GAME_OVER',
-      payload: { roomCode, players }
+    sendMessage('GAME_OVER', {
+      roomCode: stateRef.current.roomCode || roomCode,
+      players: stateRef.current.players || players
     });
 
     setGameState('gameover');
@@ -673,6 +791,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetGame = () => {
     stopCountdown();
+    if (wsRef.current) {
+      try {
+        wsRef.current.close();
+      } catch (e) {}
+      wsRef.current = null;
+    }
     setUserRole(null);
     setRoomCode(null);
     setNickname(null);
