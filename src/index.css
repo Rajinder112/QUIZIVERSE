@@ -189,3 +189,336 @@ body {
   background: linear-gradient(135deg, rgba(180, 83, 9, 0.2) 0%, rgba(180, 83, 9, 0.05) 100%);
   border: 2px solid rgba(180, 83, 9, 0.4);
 }
+
+/* ==========================================================================
+   3D DANCING CHARACTER STYLES
+   ========================================================================== */
+
+.char-wrapper {
+  perspective: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  width: 120px;
+  height: 160px;
+}
+
+.char-body {
+  width: 50px;
+  height: 70px;
+  border-radius: 25px;
+  position: relative;
+  transform-style: preserve-3d;
+  box-shadow: inset 0 4px 12px rgba(255, 255, 255, 0.3), 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 12px;
+}
+
+.char-head {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  position: absolute;
+  top: -24px;
+  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.4), 0 4px 10px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.char-eye-container {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.char-eye {
+  width: 4px;
+  height: 4px;
+  background-color: #0f172a;
+  border-radius: 50%;
+  animation: char-blink-keyframes 4s infinite;
+}
+
+.char-smile {
+  width: 10px;
+  height: 5px;
+  border-bottom: 2px solid #0f172a;
+  border-radius: 0 0 10px 10px;
+  margin-top: 4px;
+}
+
+.char-crown {
+  font-size: 16px;
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(5px);
+  animation: crown-float 2s ease-in-out infinite;
+}
+
+.char-earmuffs {
+  width: 38px;
+  height: 6px;
+  background-color: #cbd5e1;
+  border-radius: 3px;
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.char-earmuff-cup {
+  width: 8px;
+  height: 12px;
+  background-color: #475569;
+  border-radius: 4px;
+  position: absolute;
+  top: -3px;
+}
+.char-earmuff-cup.left { left: -3px; }
+.char-earmuff-cup.right { right: -3px; }
+
+.char-glasses {
+  width: 26px;
+  height: 8px;
+  background-color: #1e293b;
+  border-radius: 4px;
+  border: 1px solid #94a3b8;
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: space-around;
+  padding: 1px;
+}
+.char-glasses-lens {
+  width: 8px;
+  height: 4px;
+  background-color: #38bdf8;
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+.char-arm {
+  width: 8px;
+  height: 25px;
+  border-radius: 4px;
+  position: absolute;
+  top: 15px;
+  transform-origin: top center;
+  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.3);
+}
+
+.char-arm-left {
+  left: -6px;
+}
+
+.char-arm-right {
+  right: -6px;
+}
+
+.char-leg {
+  width: 10px;
+  height: 18px;
+  border-radius: 4px;
+  position: absolute;
+  bottom: -12px;
+  transform-origin: top center;
+  box-shadow: inset 0 -2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.char-leg-left {
+  left: 10px;
+}
+
+.char-leg-right {
+  right: 10px;
+}
+
+.char-shadow {
+  width: 44px;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  position: absolute;
+  bottom: -18px;
+  filter: blur(2px);
+}
+
+/* Character Specific Themes */
+.char-gold {
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border: 1.5px solid #fef08a;
+  color: #78350f;
+}
+.char-gold .char-head, .char-gold .char-arm, .char-gold .char-leg {
+  background: linear-gradient(135deg, #fef08a 0%, #fbbf24 100%);
+}
+
+.char-silver {
+  background: linear-gradient(135deg, #cbd5e1 0%, #64748b 100%);
+  border: 1.5px solid #f1f5f9;
+  color: #1e293b;
+}
+.char-silver .char-head, .char-silver .char-arm, .char-silver .char-leg {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+}
+
+.char-bronze {
+  background: linear-gradient(135deg, #ea580c 0%, #7c2d12 100%);
+  border: 1.5px solid #ffedd5;
+  color: #ffedd5;
+}
+.char-bronze .char-head, .char-bronze .char-arm, .char-bronze .char-leg {
+  background: linear-gradient(135deg, #fdba74 0%, #ea580c 100%);
+}
+
+/* Character Placement Specific Animations */
+.char-dance-1st {
+  animation: dance-gold-animation 1.5s ease-in-out infinite;
+}
+.char-dance-1st .char-arm-left {
+  animation: char-arm-wave-left-fast 0.6s ease-in-out infinite alternate;
+}
+.char-dance-1st .char-arm-right {
+  animation: char-arm-wave-right-fast 0.6s ease-in-out infinite alternate-reverse;
+}
+.char-dance-1st .char-leg-left {
+  animation: char-leg-kick-left 0.75s ease-in-out infinite alternate;
+}
+.char-dance-1st .char-leg-right {
+  animation: char-leg-kick-right 0.75s ease-in-out infinite alternate-reverse;
+}
+.char-dance-1st .char-shadow {
+  animation: char-shadow-scale-gold 1.5s ease-in-out infinite;
+}
+
+.char-dance-2nd {
+  animation: dance-silver-animation 2.0s ease-in-out infinite;
+}
+.char-dance-2nd .char-arm-left {
+  animation: char-arm-wave-left-slow 1.0s ease-in-out infinite alternate;
+}
+.char-dance-2nd .char-arm-right {
+  animation: char-arm-wave-right-slow 1.0s ease-in-out infinite alternate;
+}
+.char-dance-2nd .char-shadow {
+  animation: char-shadow-scale-silver 2.0s ease-in-out infinite;
+}
+
+.char-dance-3rd {
+  animation: dance-bronze-animation 1.0s ease-in-out infinite;
+}
+.char-dance-3rd .char-leg-left, .char-dance-3rd .char-leg-right {
+  animation: char-leg-hop 0.5s ease-in-out infinite alternate;
+}
+.char-dance-3rd .char-shadow {
+  animation: char-shadow-scale-bronze 1.0s ease-in-out infinite;
+}
+
+/* Keyframes definition */
+@keyframes dance-gold-animation {
+  0%, 100% {
+    transform: translateY(0) rotateY(0deg) rotateX(10deg);
+  }
+  20% {
+    transform: translateY(-25px) rotateY(45deg) rotateX(15deg);
+  }
+  40% {
+    transform: translateY(-35px) rotateY(90deg) rotateX(20deg) scaleY(1.05);
+  }
+  60% {
+    transform: translateY(-15px) rotateY(135deg) rotateX(15deg);
+  }
+  80% {
+    transform: translateY(0) rotateY(180deg) rotateX(10deg) scaleY(0.9);
+  }
+}
+
+@keyframes dance-silver-animation {
+  0%, 100% {
+    transform: rotateZ(-8deg) translateX(-8px) rotateY(-15deg);
+  }
+  50% {
+    transform: rotateZ(8deg) translateX(8px) rotateY(15deg);
+  }
+}
+
+@keyframes dance-bronze-animation {
+  0%, 100% {
+    transform: translateY(0) scaleY(1) rotateX(10deg);
+  }
+  50% {
+    transform: translateY(-15px) scaleY(1.05) rotateX(10deg);
+  }
+  90% {
+    transform: translateY(0) scaleY(0.9) rotateX(10deg);
+  }
+}
+
+@keyframes char-blink-keyframes {
+  0%, 95%, 100% { transform: scaleY(1); }
+  97% { transform: scaleY(0.1); }
+}
+
+@keyframes crown-float {
+  0%, 100% { transform: translateX(-50%) translateY(0) rotate(-3deg); }
+  50% { transform: translateX(-50%) translateY(-4px) rotate(3deg); }
+}
+
+@keyframes char-arm-wave-left-fast {
+  0% { transform: rotate(-20deg); }
+  100% { transform: rotate(-130deg); }
+}
+
+@keyframes char-arm-wave-right-fast {
+  0% { transform: rotate(20deg); }
+  100% { transform: rotate(130deg); }
+}
+
+@keyframes char-arm-wave-left-slow {
+  0% { transform: rotate(-20deg); }
+  100% { transform: rotate(-80deg); }
+}
+
+@keyframes char-arm-wave-right-slow {
+  0% { transform: rotate(80deg); }
+  100% { transform: rotate(20deg); }
+}
+
+@keyframes char-leg-kick-left {
+  0% { transform: rotate(15deg); }
+  100% { transform: rotate(-20deg); }
+}
+
+@keyframes char-leg-kick-right {
+  0% { transform: rotate(-15deg); }
+  100% { transform: rotate(20deg); }
+}
+
+@keyframes char-leg-hop {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+
+@keyframes char-shadow-scale-gold {
+  0%, 80%, 100% { transform: scale(1); opacity: 0.5; }
+  40% { transform: scale(0.6); opacity: 0.2; }
+}
+
+@keyframes char-shadow-scale-silver {
+  0%, 100% { transform: scale(1) translateX(6px); opacity: 0.5; }
+  50% { transform: scale(1) translateX(-6px); opacity: 0.5; }
+}
+
+@keyframes char-shadow-scale-bronze {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(0.7); opacity: 0.25; }
+}
+

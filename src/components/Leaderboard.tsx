@@ -68,7 +68,11 @@ export const Leaderboard: React.FC = () => {
                 </span>
               ) : (
                 <span className="text-red-400 flex items-center gap-1 font-semibold">
-                  <ShieldAlert size={14} /> Incorrect or timeout last round. (+0 pts)
+                  <ShieldAlert size={14} /> 
+                  {myInfo.lastScoreEarned < 0 
+                    ? `Incorrect answer last round. (${myInfo.lastScoreEarned} pts)` 
+                    : 'Incorrect or timeout last round. (+0 pts)'
+                  }
                 </span>
               )}
             </span>
@@ -141,9 +145,9 @@ export const Leaderboard: React.FC = () => {
                   {/* Score details */}
                   <div className="flex items-center gap-4">
                     {/* Score bump alert */}
-                    {player.lastQuestionAnswered === currentQuestionIndex && player.lastScoreEarned > 0 && (
-                      <span className="text-xs text-green-400 font-bold animate-pulse shrink-0">
-                        +{player.lastScoreEarned}
+                    {player.lastQuestionAnswered === currentQuestionIndex && player.lastScoreEarned !== 0 && (
+                      <span className={`text-xs font-bold animate-pulse shrink-0 ${player.lastScoreEarned > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {player.lastScoreEarned > 0 ? `+${player.lastScoreEarned}` : player.lastScoreEarned}
                       </span>
                     )}
 

@@ -3,6 +3,47 @@ import { useGame } from '../context/GameContext';
 import confetti from 'canvas-confetti';
 import { Home, Trophy, Sparkles } from 'lucide-react';
 
+const DancingCharacter: React.FC<{ place: '1st' | '2nd' | '3rd' }> = ({ place }) => {
+  const themeClass = 
+    place === '1st' ? 'char-gold' : 
+    place === '2nd' ? 'char-silver' : 'char-bronze';
+  const danceClass = 
+    place === '1st' ? 'char-dance-1st' : 
+    place === '2nd' ? 'char-dance-2nd' : 'char-dance-3rd';
+
+  return (
+    <div className={`char-wrapper ${danceClass}`}>
+      <div className="char-shadow" />
+      <div className={`char-body ${themeClass}`}>
+        <div className="char-head">
+          {place === '1st' && <div className="char-crown">👑</div>}
+          {place === '2nd' && (
+            <div className="char-earmuffs">
+              <div className="char-earmuff-cup left" />
+              <div className="char-earmuff-cup right" />
+            </div>
+          )}
+          {place === '3rd' && (
+            <div className="char-glasses">
+              <div className="char-glasses-lens" />
+              <div className="char-glasses-lens" />
+            </div>
+          )}
+          <div className="char-eye-container">
+            <div className="char-eye" />
+            <div className="char-eye" />
+          </div>
+          <div className="char-smile" />
+        </div>
+        <div className={`char-arm char-arm-left ${themeClass}`} />
+        <div className={`char-arm char-arm-right ${themeClass}`} />
+        <div className={`char-leg char-leg-left ${themeClass}`} />
+        <div className={`char-leg char-leg-right ${themeClass}`} />
+      </div>
+    </div>
+  );
+};
+
 export const EndGame: React.FC = () => {
   const { players, resetGame } = useGame();
 
@@ -50,12 +91,18 @@ export const EndGame: React.FC = () => {
       </div>
 
       {/* Podium Layout */}
-      <div className="flex flex-col md:flex-row justify-center items-end gap-6 md:gap-4 mb-16 px-4 max-w-2xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-center items-end gap-10 md:gap-4 mb-16 px-4 max-w-2xl mx-auto pt-16">
         
         {/* 2nd Place (Left) */}
         {secondPlace ? (
           <div className="w-full md:w-1/3 flex flex-col items-center animate-slide-up delay-100 order-2 md:order-1">
             <span className="text-xs font-bold text-slate-400 uppercase mb-2">2nd Place</span>
+            
+            {/* 3D Character */}
+            <div className="mb-3 hover:scale-110 transition-transform duration-300">
+              <DancingCharacter place="2nd" />
+            </div>
+
             <div className="text-sm font-bold text-white text-center truncate max-w-[150px] mb-1">
               {secondPlace.nickname}
             </div>
@@ -64,9 +111,9 @@ export const EndGame: React.FC = () => {
             </div>
             
             {/* Podium step block */}
-            <div className="w-full h-28 podium-2nd rounded-t-2xl flex flex-col items-center justify-center shadow-lg shadow-black/30">
-              <span className="text-3xl font-black text-slate-400">🥈</span>
-              <span className="text-sm font-bold text-slate-400 mt-1">Silver</span>
+            <div className="w-full h-24 podium-2nd rounded-t-2xl flex flex-col items-center justify-center shadow-lg shadow-black/30">
+              <span className="text-xs font-bold text-slate-450 uppercase tracking-wider">2nd</span>
+              <span className="text-sm font-extrabold text-slate-300">Silver</span>
             </div>
           </div>
         ) : (
@@ -79,6 +126,12 @@ export const EndGame: React.FC = () => {
             <div className="flex items-center gap-1.5 text-yellow-400 font-black text-xs uppercase tracking-widest mb-2 animate-bounce-slow">
               <Sparkles size={14} /> Champion <Sparkles size={14} />
             </div>
+
+            {/* 3D Character */}
+            <div className="mb-3 hover:scale-110 transition-transform duration-300">
+              <DancingCharacter place="1st" />
+            </div>
+
             <div className="text-xl font-black text-yellow-400 text-center truncate max-w-[180px] mb-1">
               {firstPlace.nickname}
             </div>
@@ -87,11 +140,9 @@ export const EndGame: React.FC = () => {
             </div>
             
             {/* Podium step block */}
-            <div className="w-full h-40 podium-1st rounded-t-2xl flex flex-col items-center justify-center relative shadow-xl shadow-yellow-500/5">
-              {/* Crown */}
-              <div className="absolute -top-6 text-3xl animate-bounce">👑</div>
-              <span className="text-4xl font-black">🥇</span>
-              <span className="text-base font-black text-yellow-400 mt-1">Gold</span>
+            <div className="w-full h-32 podium-1st rounded-t-2xl flex flex-col items-center justify-center relative shadow-xl shadow-yellow-500/5">
+              <span className="text-xs font-bold text-yellow-600/85 uppercase tracking-wider">1st</span>
+              <span className="text-base font-black text-yellow-400">Gold</span>
             </div>
           </div>
         ) : (
@@ -104,6 +155,12 @@ export const EndGame: React.FC = () => {
         {thirdPlace ? (
           <div className="w-full md:w-1/3 flex flex-col items-center animate-slide-up delay-200 order-3 md:order-3">
             <span className="text-xs font-bold text-slate-400 uppercase mb-2">3rd Place</span>
+            
+            {/* 3D Character */}
+            <div className="mb-3 hover:scale-110 transition-transform duration-300">
+              <DancingCharacter place="3rd" />
+            </div>
+
             <div className="text-sm font-bold text-white text-center truncate max-w-[150px] mb-1">
               {thirdPlace.nickname}
             </div>
@@ -112,9 +169,9 @@ export const EndGame: React.FC = () => {
             </div>
             
             {/* Podium step block */}
-            <div className="w-full h-20 podium-3rd rounded-t-2xl flex flex-col items-center justify-center shadow-lg shadow-black/30">
-              <span className="text-3xl font-black">🥉</span>
-              <span className="text-sm font-bold text-amber-600 mt-1">Bronze</span>
+            <div className="w-full h-16 podium-3rd rounded-t-2xl flex flex-col items-center justify-center shadow-lg shadow-black/30">
+              <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">3rd</span>
+              <span className="text-sm font-extrabold text-amber-500">Bronze</span>
             </div>
           </div>
         ) : (
