@@ -465,13 +465,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!currentQuestion) return player;
 
           const correct = answerInfo.optionIndex === currentQuestion.correctAnswer;
-          // Points Formula: 
-          // Correct: 1000 base points, deduct 20 points per second elapsed (min 300 pts)
-          // Incorrect: -200 base points, deduct 10 points per second elapsed (max -500 pts)
+          // Points Formula: 1000 base points, deduct 20 points per second elapsed
+          // Minimum 300 points for correct answer to keep it rewarding
           const timeSec = Math.min(Math.max(answerInfo.timeElapsed, 0), 30);
-          const scoreEarned = correct 
-            ? Math.max(1000 - Math.round(timeSec * 20), 300) 
-            : -(200 + Math.round(timeSec * 10));
+          const scoreEarned = correct ? Math.max(1000 - Math.round(timeSec * 20), 300) : 0;
 
           return {
             ...player,
@@ -713,9 +710,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Time spent calculating (max timer starts at 30 seconds down to 0)
     const timeElapsed = 30 - timer; 
-    const pointsEarned = correct 
-      ? Math.max(1000 - Math.round(timeElapsed * 20), 300) 
-      : -(200 + Math.round(timeElapsed * 10));
+    const pointsEarned = correct ? Math.max(1000 - Math.round(timeElapsed * 20), 300) : 0;
 
     // Set feedback state locally
     setFeedback({
