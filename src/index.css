@@ -191,208 +191,288 @@ body {
 }
 
 /* ==========================================================================
-   3D DANCING CHARACTER STYLES
+   3D DANCING CHIBI ANIME CHARACTER STYLES
    ========================================================================== */
 
-.char-wrapper {
+.chibi-wrapper {
   perspective: 800px;
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
-  width: 120px;
-  height: 160px;
+  width: 140px;
+  height: 200px;
 }
 
-.char-body {
-  width: 50px;
-  height: 70px;
-  border-radius: 25px;
-  position: relative;
-  transform-style: preserve-3d;
-  box-shadow: inset 0 4px 12px rgba(255, 255, 255, 0.3), 0 8px 24px rgba(0, 0, 0, 0.5);
+.chibi-character {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding-top: 12px;
+  position: relative;
+  transform-style: preserve-3d;
 }
 
-.char-head {
-  width: 32px;
-  height: 32px;
+/* Head - Chibi style (Large) */
+.chibi-head {
+  width: 76px;
+  height: 72px;
+  border-radius: 38px 38px 34px 34px;
+  background: #ffe4e6; /* Peach-rose skin tone */
+  position: relative;
+  box-shadow: inset 0 -4px 8px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.3);
+  z-index: 10;
+}
+
+/* Anime Spiky Hair Base */
+.chibi-hair-base {
+  position: absolute;
+  top: -12px;
+  left: -4px;
+  width: 84px;
+  height: 48px;
+  border-radius: 42px 42px 0 0;
+  z-index: 2;
+}
+
+.chibi-hair-spike {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 26px solid currentColor;
+  transform-origin: bottom center;
+}
+
+.chibi-hair-bangs {
+  position: absolute;
+  top: 10px;
+  left: 6px;
+  width: 64px;
+  height: 15px;
+  display: flex;
+  gap: 1px;
+  z-index: 12;
+}
+
+.chibi-bang-strand {
+  width: 12px;
+  height: 20px;
+  background-color: currentColor;
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+}
+
+/* Big Expressive Anime Eyes */
+.chibi-eye-container {
+  display: flex;
+  justify-content: space-between;
+  width: 48px;
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+}
+
+.chibi-eye {
+  width: 14px;
+  height: 22px;
+  background-color: #0f172a;
+  border-radius: 50% / 35% 35% 65% 65%;
+  position: relative;
+  overflow: hidden;
+  border-top: 2px solid #020617;
+}
+
+.chibi-eye-sparkle-1 {
+  width: 5px;
+  height: 5px;
+  background-color: #ffffff;
   border-radius: 50%;
   position: absolute;
-  top: -24px;
-  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.4), 0 4px 10px rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 3px;
+  left: 3px;
 }
 
-.char-eye-container {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.char-eye {
-  width: 4px;
-  height: 4px;
-  background-color: #0f172a;
+.chibi-eye-sparkle-2 {
+  width: 2.5px;
+  height: 2.5px;
+  background-color: #ffffff;
   border-radius: 50%;
-  animation: char-blink-keyframes 4s infinite;
+  position: absolute;
+  bottom: 4px;
+  right: 3px;
 }
 
-.char-smile {
+/* Blushing cheeks */
+.chibi-blush {
   width: 10px;
   height: 5px;
-  border-bottom: 2px solid #0f172a;
-  border-radius: 0 0 10px 10px;
-  margin-top: 4px;
+  background-color: rgba(244, 63, 94, 0.45);
+  border-radius: 50%;
+  position: absolute;
+  top: 45px;
+  filter: blur(0.5px);
+}
+.chibi-blush-left { left: 10px; }
+.chibi-blush-right { right: 10px; }
+
+/* Smiling Mouth */
+.chibi-mouth {
+  width: 12px;
+  height: 6px;
+  border-bottom: 2.5px solid #be123c;
+  border-radius: 0 0 12px 12px;
+  position: absolute;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
 }
 
-.char-crown {
-  font-size: 16px;
+/* Accessories */
+.chibi-crown {
+  width: 34px;
+  height: 22px;
   position: absolute;
-  top: -20px;
+  top: -28px;
   left: 50%;
   transform: translateX(-50%) translateZ(5px);
+  background: linear-gradient(to bottom, #fbbf24 0%, #d97706 100%);
+  clip-path: polygon(0% 100%, 10% 20%, 30% 80%, 50% 10%, 70% 80%, 90% 20%, 100% 100%);
+  border: 1px solid #fef08a;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.25);
+  z-index: 20;
   animation: crown-float 2s ease-in-out infinite;
 }
 
-.char-earmuffs {
-  width: 38px;
-  height: 6px;
-  background-color: #cbd5e1;
-  border-radius: 3px;
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.char-earmuff-cup {
-  width: 8px;
-  height: 12px;
-  background-color: #475569;
-  border-radius: 4px;
-  position: absolute;
-  top: -3px;
-}
-.char-earmuff-cup.left { left: -3px; }
-.char-earmuff-cup.right { right: -3px; }
-
-.char-glasses {
-  width: 26px;
-  height: 8px;
-  background-color: #1e293b;
-  border-radius: 4px;
-  border: 1px solid #94a3b8;
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  justify-content: space-around;
-  padding: 1px;
-}
-.char-glasses-lens {
-  width: 8px;
-  height: 4px;
-  background-color: #38bdf8;
-  border-radius: 2px;
-  opacity: 0.8;
-}
-
-.char-arm {
-  width: 8px;
-  height: 25px;
-  border-radius: 4px;
-  position: absolute;
-  top: 15px;
-  transform-origin: top center;
-  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.3);
-}
-
-.char-arm-left {
-  left: -6px;
-}
-
-.char-arm-right {
-  right: -6px;
-}
-
-.char-leg {
-  width: 10px;
+.chibi-glasses {
+  width: 58px;
   height: 18px;
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 18;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1px;
+}
+
+.chibi-glass-lens {
+  width: 25px;
+  height: 16px;
+  background-color: rgba(56, 189, 248, 0.35);
+  border-radius: 5px;
+  border: 2px solid #1e293b;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.3);
+}
+
+.chibi-headset-band {
+  width: 82px;
+  height: 8px;
+  background-color: #94a3b8;
   border-radius: 4px;
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  box-shadow: inset 0 2px 3px rgba(255,255,255,0.3);
+}
+
+.chibi-headset-ear {
+  width: 14px;
+  height: 24px;
+  background-color: #334155;
+  border: 1.5px solid #475569;
+  border-radius: 6px;
+  position: absolute;
+  top: 20px;
+  z-index: 12;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+.chibi-headset-ear.left { left: -9px; }
+.chibi-headset-ear.right { right: -9px; }
+
+/* Small Body - Chibi style */
+.chibi-body {
+  width: 44px;
+  height: 50px;
+  border-radius: 12px 12px 18px 18px;
+  position: relative;
+  margin-top: -6px; /* Tuck slightly under head */
+  box-shadow: inset 0 4px 8px rgba(255,255,255,0.25), 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 8;
+  display: flex;
+  justify-content: center;
+}
+
+/* Cape for 1st place */
+.chibi-cape {
+  width: 62px;
+  height: 56px;
+  background: linear-gradient(to bottom, #ef4444 0%, #b91c1c 100%);
+  border: 1px solid #f87171;
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 6px;
+  z-index: 5;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.35);
+  animation: cape-flutter 1.2s ease-in-out infinite alternate;
+}
+
+/* Limbs */
+.chibi-arm {
+  width: 10px;
+  height: 24px;
+  border-radius: 5px;
+  position: absolute;
+  top: 8px;
+  transform-origin: top center;
+  z-index: 7;
+}
+.chibi-arm-left { left: -8px; }
+.chibi-arm-right { right: -8px; }
+
+.chibi-leg {
+  width: 11px;
+  height: 20px;
+  border-radius: 5px;
   position: absolute;
   bottom: -12px;
   transform-origin: top center;
-  box-shadow: inset 0 -2px 6px rgba(0, 0, 0, 0.3);
+  z-index: 7;
 }
-
-.char-leg-left {
-  left: 10px;
-}
-
-.char-leg-right {
-  right: 10px;
-}
+.chibi-leg-left { left: 8px; }
+.chibi-leg-right { right: 8px; }
 
 .char-shadow {
-  width: 44px;
+  width: 46px;
   height: 6px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.55);
   border-radius: 50%;
   position: absolute;
   bottom: -18px;
   filter: blur(2px);
 }
 
-/* Character Specific Themes */
-.char-gold {
-  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-  border: 1.5px solid #fef08a;
-  color: #78350f;
-}
-.char-gold .char-head, .char-gold .char-arm, .char-gold .char-leg {
-  background: linear-gradient(135deg, #fef08a 0%, #fbbf24 100%);
-}
-
-.char-silver {
-  background: linear-gradient(135deg, #cbd5e1 0%, #64748b 100%);
-  border: 1.5px solid #f1f5f9;
-  color: #1e293b;
-}
-.char-silver .char-head, .char-silver .char-arm, .char-silver .char-leg {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-}
-
-.char-bronze {
-  background: linear-gradient(135deg, #ea580c 0%, #7c2d12 100%);
-  border: 1.5px solid #ffedd5;
-  color: #ffedd5;
-}
-.char-bronze .char-head, .char-bronze .char-arm, .char-bronze .char-leg {
-  background: linear-gradient(135deg, #fdba74 0%, #ea580c 100%);
-}
-
-/* Character Placement Specific Animations */
+/* Placement specific animations */
 .char-dance-1st {
   animation: dance-gold-animation 1.5s ease-in-out infinite;
 }
-.char-dance-1st .char-arm-left {
+.char-dance-1st .chibi-arm-left {
   animation: char-arm-wave-left-fast 0.6s ease-in-out infinite alternate;
 }
-.char-dance-1st .char-arm-right {
+.char-dance-1st .chibi-arm-right {
   animation: char-arm-wave-right-fast 0.6s ease-in-out infinite alternate-reverse;
 }
-.char-dance-1st .char-leg-left {
+.char-dance-1st .chibi-leg-left {
   animation: char-leg-kick-left 0.75s ease-in-out infinite alternate;
 }
-.char-dance-1st .char-leg-right {
+.char-dance-1st .chibi-leg-right {
   animation: char-leg-kick-right 0.75s ease-in-out infinite alternate-reverse;
 }
 .char-dance-1st .char-shadow {
@@ -402,10 +482,10 @@ body {
 .char-dance-2nd {
   animation: dance-silver-animation 2.0s ease-in-out infinite;
 }
-.char-dance-2nd .char-arm-left {
+.char-dance-2nd .chibi-arm-left {
   animation: char-arm-wave-left-slow 1.0s ease-in-out infinite alternate;
 }
-.char-dance-2nd .char-arm-right {
+.char-dance-2nd .chibi-arm-right {
   animation: char-arm-wave-right-slow 1.0s ease-in-out infinite alternate;
 }
 .char-dance-2nd .char-shadow {
@@ -415,29 +495,29 @@ body {
 .char-dance-3rd {
   animation: dance-bronze-animation 1.0s ease-in-out infinite;
 }
-.char-dance-3rd .char-leg-left, .char-dance-3rd .char-leg-right {
+.char-dance-3rd .chibi-leg-left, .char-dance-3rd .chibi-leg-right {
   animation: char-leg-hop 0.5s ease-in-out infinite alternate;
 }
 .char-dance-3rd .char-shadow {
   animation: char-shadow-scale-bronze 1.0s ease-in-out infinite;
 }
 
-/* Keyframes definition */
+/* Keyframes */
 @keyframes dance-gold-animation {
   0%, 100% {
     transform: translateY(0) rotateY(0deg) rotateX(10deg);
   }
   20% {
-    transform: translateY(-25px) rotateY(45deg) rotateX(15deg);
+    transform: translateY(-24px) rotateY(45deg) rotateX(15deg);
   }
   40% {
-    transform: translateY(-35px) rotateY(90deg) rotateX(20deg) scaleY(1.05);
+    transform: translateY(-32px) rotateY(90deg) rotateX(20deg) scaleY(1.04);
   }
   60% {
-    transform: translateY(-15px) rotateY(135deg) rotateX(15deg);
+    transform: translateY(-12px) rotateY(135deg) rotateX(15deg);
   }
   80% {
-    transform: translateY(0) rotateY(180deg) rotateX(10deg) scaleY(0.9);
+    transform: translateY(0) rotateY(180deg) rotateX(10deg) scaleY(0.92);
   }
 }
 
@@ -455,10 +535,21 @@ body {
     transform: translateY(0) scaleY(1) rotateX(10deg);
   }
   50% {
-    transform: translateY(-15px) scaleY(1.05) rotateX(10deg);
+    transform: translateY(-14px) scaleY(1.04) rotateX(10deg);
   }
   90% {
-    transform: translateY(0) scaleY(0.9) rotateX(10deg);
+    transform: translateY(0) scaleY(0.92) rotateX(10deg);
+  }
+}
+
+@keyframes cape-flutter {
+  0% {
+    transform: translateX(-50%) rotate(0deg) scaleX(1);
+    border-radius: 6px 6px 12px 6px;
+  }
+  100% {
+    transform: translateX(-48%) rotate(3deg) scaleX(0.95) skewY(2deg);
+    border-radius: 6px 6px 6px 12px;
   }
 }
 
@@ -469,56 +560,56 @@ body {
 
 @keyframes crown-float {
   0%, 100% { transform: translateX(-50%) translateY(0) rotate(-3deg); }
-  50% { transform: translateX(-50%) translateY(-4px) rotate(3deg); }
+  50% { transform: translateX(-50%) translateY(-3px) rotate(3deg); }
 }
 
 @keyframes char-arm-wave-left-fast {
   0% { transform: rotate(-20deg); }
-  100% { transform: rotate(-130deg); }
+  100% { transform: rotate(-120deg); }
 }
 
 @keyframes char-arm-wave-right-fast {
   0% { transform: rotate(20deg); }
-  100% { transform: rotate(130deg); }
+  100% { transform: rotate(120deg); }
 }
 
 @keyframes char-arm-wave-left-slow {
-  0% { transform: rotate(-20deg); }
-  100% { transform: rotate(-80deg); }
+  0% { transform: rotate(-15deg); }
+  100% { transform: rotate(-75deg); }
 }
 
 @keyframes char-arm-wave-right-slow {
-  0% { transform: rotate(80deg); }
-  100% { transform: rotate(20deg); }
+  0% { transform: rotate(75deg); }
+  100% { transform: rotate(15deg); }
 }
 
 @keyframes char-leg-kick-left {
-  0% { transform: rotate(15deg); }
-  100% { transform: rotate(-20deg); }
+  0% { transform: rotate(12deg); }
+  100% { transform: rotate(-18deg); }
 }
 
 @keyframes char-leg-kick-right {
-  0% { transform: rotate(-15deg); }
-  100% { transform: rotate(20deg); }
+  0% { transform: rotate(-12deg); }
+  100% { transform: rotate(18deg); }
 }
 
 @keyframes char-leg-hop {
   0% { transform: translateY(0); }
-  100% { transform: translateY(4px); }
+  100% { transform: translateY(3px); }
 }
 
 @keyframes char-shadow-scale-gold {
   0%, 80%, 100% { transform: scale(1); opacity: 0.5; }
-  40% { transform: scale(0.6); opacity: 0.2; }
+  40% { transform: scale(0.65); opacity: 0.22; }
 }
 
 @keyframes char-shadow-scale-silver {
-  0%, 100% { transform: scale(1) translateX(6px); opacity: 0.5; }
-  50% { transform: scale(1) translateX(-6px); opacity: 0.5; }
+  0%, 100% { transform: scale(1) translateX(5px); opacity: 0.5; }
+  50% { transform: scale(1) translateX(-5px); opacity: 0.5; }
 }
 
 @keyframes char-shadow-scale-bronze {
   0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(0.7); opacity: 0.25; }
+  50% { transform: scale(0.72); opacity: 0.28; }
 }
 

@@ -4,41 +4,112 @@ import confetti from 'canvas-confetti';
 import { Home, Trophy, Sparkles } from 'lucide-react';
 
 const DancingCharacter: React.FC<{ place: '1st' | '2nd' | '3rd' }> = ({ place }) => {
-  const themeClass = 
-    place === '1st' ? 'char-gold' : 
-    place === '2nd' ? 'char-silver' : 'char-bronze';
+  const isGold = place === '1st';
+  const isSilver = place === '2nd';
+  const isBronze = place === '3rd';
+
+  // Hair colors
+  const hairColor = 
+    isGold ? 'text-yellow-400' : 
+    isSilver ? 'text-slate-300' : 'text-amber-700';
+
+  // Outfit colors
+  const bodyColor = 
+    isGold ? 'bg-gradient-to-b from-yellow-500 to-amber-600 border border-yellow-300' : 
+    isSilver ? 'bg-gradient-to-b from-slate-400 to-slate-600 border border-slate-300' : 
+    'bg-gradient-to-b from-orange-600 to-amber-800 border border-orange-400';
+
   const danceClass = 
     place === '1st' ? 'char-dance-1st' : 
     place === '2nd' ? 'char-dance-2nd' : 'char-dance-3rd';
 
   return (
-    <div className={`char-wrapper ${danceClass}`}>
+    <div className={`chibi-wrapper ${danceClass}`}>
       <div className="char-shadow" />
-      <div className={`char-body ${themeClass}`}>
-        <div className="char-head">
-          {place === '1st' && <div className="char-crown">👑</div>}
-          {place === '2nd' && (
-            <div className="char-earmuffs">
-              <div className="char-earmuff-cup left" />
-              <div className="char-earmuff-cup right" />
-            </div>
-          )}
-          {place === '3rd' && (
-            <div className="char-glasses">
-              <div className="char-glasses-lens" />
-              <div className="char-glasses-lens" />
-            </div>
-          )}
-          <div className="char-eye-container">
-            <div className="char-eye" />
-            <div className="char-eye" />
+      
+      <div className="chibi-character">
+        {/* Cape for 1st Place */}
+        {isGold && <div className="chibi-cape" />}
+
+        {/* Head */}
+        <div className="chibi-head">
+          {/* Spiky Anime Hair Base */}
+          <div className={`chibi-hair-base ${hairColor} bg-current`}>
+            {/* Left Hair Spike */}
+            <div className={`chibi-hair-spike ${hairColor}`} style={{ left: '-10px', top: '-5px', transform: 'rotate(-30deg)' }} />
+            {/* Center Hair Spikes */}
+            <div className={`chibi-hair-spike ${hairColor}`} style={{ left: '12px', top: '-18px', transform: 'rotate(-5deg)' }} />
+            <div className={`chibi-hair-spike ${hairColor}`} style={{ left: '32px', top: '-20px', transform: 'rotate(0deg)' }} />
+            <div className={`chibi-hair-spike ${hairColor}`} style={{ left: '52px', top: '-18px', transform: 'rotate(10deg)' }} />
+            {/* Right Hair Spike */}
+            <div className={`chibi-hair-spike ${hairColor}`} style={{ right: '-10px', top: '-5px', transform: 'rotate(30deg)' }} />
           </div>
-          <div className="char-smile" />
+
+          {/* Hair Bangs on forehead */}
+          <div className={`chibi-hair-bangs ${hairColor}`}>
+            <div className="chibi-bang-strand" style={{ height: '18px', transform: 'rotate(10deg)' }} />
+            <div className="chibi-bang-strand" style={{ height: '24px', transform: 'rotate(5deg)' }} />
+            <div className="chibi-bang-strand" style={{ height: '20px', transform: 'rotate(-5deg)' }} />
+            <div className="chibi-bang-strand" style={{ height: '26px' }} />
+            <div className="chibi-bang-strand" style={{ height: '18px', transform: 'rotate(-10deg)' }} />
+          </div>
+
+          {/* Large Shiny Anime Eyes */}
+          <div className="chibi-eye-container">
+            <div className="chibi-eye">
+              <div className="chibi-eye-sparkle-1" />
+              <div className="chibi-eye-sparkle-2" />
+            </div>
+            <div className="chibi-eye">
+              <div className="chibi-eye-sparkle-1" />
+              <div className="chibi-eye-sparkle-2" />
+            </div>
+          </div>
+
+          {/* Blushing cheeks */}
+          <div className="chibi-blush chibi-blush-left" />
+          <div className="chibi-blush chibi-blush-right" />
+
+          {/* Mouth */}
+          <div className="chibi-mouth" />
+
+          {/* Accessories */}
+          {isGold && (
+            <div className="chibi-crown">
+              <div className="absolute inset-0 flex justify-around items-end pb-0.5">
+                <span className="w-1 h-1 rounded-full bg-red-500" />
+                <span className="w-1 h-1 rounded-full bg-blue-500" />
+                <span className="w-1 h-1 rounded-full bg-green-500" />
+              </div>
+            </div>
+          )}
+          {isSilver && (
+            <>
+              <div className="chibi-headset-band" />
+              <div className="chibi-headset-ear left" />
+              <div className="chibi-headset-ear right" />
+            </>
+          )}
+          {isBronze && (
+            <div className="chibi-glasses">
+              <div className="chibi-glass-lens" />
+              <div className="chibi-glass-lens" />
+            </div>
+          )}
         </div>
-        <div className={`char-arm char-arm-left ${themeClass}`} />
-        <div className={`char-arm char-arm-right ${themeClass}`} />
-        <div className={`char-leg char-leg-left ${themeClass}`} />
-        <div className={`char-leg char-leg-right ${themeClass}`} />
+
+        {/* Small Body */}
+        <div className={`chibi-body ${bodyColor}`}>
+          {isGold && <span className="text-[10px] text-yellow-300 font-black mt-2">★</span>}
+          {isSilver && <span className="text-[10px] text-slate-200 font-black mt-2">✦</span>}
+          {isBronze && <span className="text-[8px] text-orange-200 font-bold mt-2.5">▲</span>}
+
+          {/* Outfitted limbs */}
+          <div className={`chibi-arm chibi-arm-left ${bodyColor}`} />
+          <div className={`chibi-arm chibi-arm-right ${bodyColor}`} />
+          <div className={`chibi-leg chibi-leg-left ${bodyColor}`} />
+          <div className={`chibi-leg chibi-leg-right ${bodyColor}`} />
+        </div>
       </div>
     </div>
   );
