@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGame } from '../context/GameContext';
 import { QRCodeSVG } from 'qrcode.react';
-import { Users, UserPlus, Play, ArrowLeft, Trash2, Link, Copy, Check, FileSpreadsheet } from 'lucide-react';
+import { Users, UserPlus, Play, ArrowLeft, Trash2, Link, Copy, Check, FileSpreadsheet, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 export const HostLobby: React.FC = () => {
@@ -18,6 +18,7 @@ export const HostLobby: React.FC = () => {
   } = useGame();
 
   const [copied, setCopied] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   // Generate join link
   const joinUrl = `${window.location.origin}/?room=${roomCode}`;
@@ -90,10 +91,23 @@ export const HostLobby: React.FC = () => {
 
           {/* Google Sheet Web App Link (Optional Configuration) */}
           <div className="mt-6 bg-slate-950/45 p-4 rounded-xl border border-slate-900/60">
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-              <FileSpreadsheet className="text-emerald-400" size={14} />
-              Google Sheets Export URL (Optional)
-            </label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                <FileSpreadsheet className="text-emerald-400" size={14} />
+                Google Sheets Export URL (Optional)
+              </label>
+              
+              <button
+                type="button"
+                onClick={() => setShowInstructions(!showInstructions)}
+                className="flex items-center gap-1 text-[10px] font-bold text-quizPurple bg-quizPurple/10 border border-quizPurple/20 px-2.5 py-1 rounded hover:bg-quizPurple hover:text-white transition-all cursor-pointer animate-pulse-slow"
+                title="View setup instructions"
+              >
+                <Plus size={10} />
+                Setup Guide
+              </button>
+            </div>
+            
             <input
               type="text"
               placeholder="Paste Apps Script Web App URL to auto-save"
@@ -104,6 +118,53 @@ export const HostLobby: React.FC = () => {
             <span className="text-[10px] text-slate-500 block mt-1">
               Paste your Web App URL here before starting, and the game will auto-export results to this sheet when complete.
             </span>
+
+            {showInstructions && (
+              <div className="mt-3 text-slate-400 text-xs leading-relaxed space-y-3 bg-slate-950/60 p-4 rounded-xl border border-slate-900 animate-slide-up">
+                <ol className="list-decimal pl-4 space-y-2">
+                  <li>
+                    Open or create a <a href="https://sheets.new" target="_blank" rel="noopener noreferrer" className="text-quizPurple hover:underline font-semibold">Google Spreadsheet</a>.
+                  </li>
+                  <li>
+                    Go to **Extensions** &rarr; **Apps Script**.
+                  </li>
+                  <li>
+                    Replace the default script contents with the following code block:
+                    <pre className="mt-1.5 p-3 bg-slate-950 border border-slate-850 rounded-lg overflow-x-auto text-[10px] text-quizPurple font-mono max-h-48">
+{`function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["Timestamp", "Quiz Title", "Rank", "Player Nickname", "Score", "Is Bot?"]);
+    }
+    var timestamp = new Date();
+    data.scoreboard.forEach(function(player) {
+      sheet.appendRow([timestamp, data.quizTitle, player.rank, player.nickname, player.score, player.isBot ? "Yes" : "No"]);
+    });
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`}
+                    </pre>
+                  </li>
+                  <li>
+                    Click **Deploy** (top right) &rarr; **New deployment**.
+                  </li>
+                  <li>
+                    Select type **Web app**. Change settings to:
+                    <ul className="list-disc pl-4 mt-1 font-semibold text-slate-350">
+                      <li>**Execute as:** Me</li>
+                      <li>**Who has access:** Anyone</li>
+                    </ul>
+                  </li>
+                  <li>
+                    Click **Deploy**, approve authorization, copy the **Web App URL**, and paste it in the input field above!
+                  </li>
+                </ol>
+              </div>
+            )}
           </div>
           </div>
 
