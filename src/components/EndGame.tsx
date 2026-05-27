@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import confetti from 'canvas-confetti';
 import { Home, Trophy, Sparkles, FileSpreadsheet, ChevronDown, ChevronUp, Check, AlertCircle, Loader2 } from 'lucide-react';
@@ -121,15 +121,48 @@ export const EndGame: React.FC = () => {
     resetGame, 
     userRole, 
     currentQuiz, 
-    googleSheetUrl, 
-    setGoogleSheetUrl, 
+    googleSheetUrls, 
+    saveGoogleSheetUrl, 
     exportScoreboardToSheet 
   } = useGame();
 
-  const [sheetUrlInput, setSheetUrlInput] = useState(googleSheetUrl);
+  const topicUrl = currentQuiz ? (googleSheetUrls[currentQuiz.id] || '') : '';
+
+  const [sheetUrlInput, setSheetUrlInput] = useState(topicUrl);
   const [exportState, setExportState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [showInstructions, setShowInstructions] = useState(false);
+
+  const autoExportedRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      userRole === 'host' &&
+      currentQuiz &&
+      googleSheetUrls[currentQuiz.id] &&
+      googleSheetUrls[currentQuiz.id].startsWith('https://script.google.com/') &&
+      !autoExportedRef.current
+    ) {
+      autoExportedRef.current = true;
+      const targetUrl = googleSheetUrls[currentQuiz.id].trim();
+      setExportState('loading');
+      setErrorMessage('');
+
+      exportScoreboardToSheet(targetUrl, currentQuiz.title, players)
+        .then((success) => {
+          if (success) {
+            setExportState('success');
+          } else {
+            setExportState('error');
+            setErrorMessage('Failed to auto-export scoreboard. Check your Apps Script deployment permissions.');
+          }
+        })
+        .catch((err) => {
+          setExportState('error');
+          setErrorMessage('Failed to auto-export: ' + err.message);
+        });
+    }
+  }, [userRole, currentQuiz, googleSheetUrls, players, exportScoreboardToSheet]);
 
   const handleExport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,7 +181,9 @@ export const EndGame: React.FC = () => {
     setErrorMessage('');
     
     // Save URL for future sessions
-    setGoogleSheetUrl(sheetUrlInput.trim());
+    if (currentQuiz) {
+      saveGoogleSheetUrl(currentQuiz.id, sheetUrlInput.trim());
+    }
 
     const success = await exportScoreboardToSheet(
       sheetUrlInput.trim(),

@@ -61,8 +61,8 @@ interface GameContextType {
   setEditingQuiz: (quiz: Quiz | null) => void;
   setUserRole: (role: UserRole) => void;
   setGameState: (state: GameState) => void;
-  googleSheetUrl: string;
-  setGoogleSheetUrl: (url: string) => void;
+  googleSheetUrls: Record<string, string>;
+  saveGoogleSheetUrl: (quizId: string, url: string) => void;
   exportScoreboardToSheet: (url: string, quizTitle: string, playersList: Player[]) => Promise<boolean>;
 }
 
@@ -166,13 +166,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [answersCount, setAnswersCount] = useState<number>(0);
   const [hasAnswered, setHasAnswered] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
-  const [googleSheetUrl, setGoogleSheetUrlState] = useState<string>(() => {
-    return localStorage.getItem('quiziverse_google_sheet_url') ?? '';
+  const [googleSheetUrls, setGoogleSheetUrlsState] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem('quiziverse_google_sheet_urls');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
   });
 
-  const setGoogleSheetUrl = (url: string) => {
-    setGoogleSheetUrlState(url);
-    localStorage.setItem('quiziverse_google_sheet_url', url);
+  const saveGoogleSheetUrl = (quizId: string, url: string) => {
+    setGoogleSheetUrlsState((prev) => {
+      const updated = { ...prev, [quizId]: url };
+      localStorage.setItem('quiziverse_google_sheet_urls', JSON.stringify(updated));
+      return updated;
+    });
   };
   const [feedback, setFeedback] = useState<GameContextType['feedback']>(null);
 
@@ -934,8 +942,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setEditingQuiz,
         setUserRole,
         setGameState,
-        googleSheetUrl,
-        setGoogleSheetUrl,
+        googleSheetUrls,
+        saveGoogleSheetUrl,
         exportScoreboardToSheet,
       }}
     >

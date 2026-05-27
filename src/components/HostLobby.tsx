@@ -13,8 +13,8 @@ export const HostLobby: React.FC = () => {
     removePlayer, 
     startGame, 
     resetGame,
-    googleSheetUrl,
-    setGoogleSheetUrl
+    googleSheetUrls,
+    saveGoogleSheetUrl
   } = useGame();
 
   const [copied, setCopied] = useState(false);
@@ -91,18 +91,18 @@ export const HostLobby: React.FC = () => {
           {/* Google Sheet Web App Link (Optional Configuration) */}
           <div className="mt-6 bg-slate-950/45 p-4 rounded-xl border border-slate-900/60">
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-              <FileSpreadsheet className="text-emerald-450" size={14} />
+              <FileSpreadsheet className="text-emerald-400" size={14} />
               Google Sheets Export URL (Optional)
             </label>
             <input
               type="text"
               placeholder="Paste Apps Script Web App URL to auto-save"
-              value={googleSheetUrl}
-              onChange={(e) => setGoogleSheetUrl(e.target.value)}
+              value={currentQuiz ? (googleSheetUrls[currentQuiz.id] || '') : ''}
+              onChange={(e) => currentQuiz && saveGoogleSheetUrl(currentQuiz.id, e.target.value)}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-quizPurple focus:ring-1 focus:ring-quizPurple rounded-lg text-slate-200 outline-none transition-all text-xs"
             />
             <span className="text-[10px] text-slate-500 block mt-1">
-              Paste your Web App URL here before starting, and it will be pre-filled on the podium screen.
+              Paste your Web App URL here before starting, and the game will auto-export results to this sheet when complete.
             </span>
           </div>
           </div>
