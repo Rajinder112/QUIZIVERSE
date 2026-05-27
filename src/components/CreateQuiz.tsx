@@ -5,18 +5,16 @@ import { Plus, Trash2, ArrowLeft, Save, AlertCircle, FileUp, Info } from 'lucide
 import { read, utils } from 'xlsx';
 
 export const CreateQuiz: React.FC = () => {
-  const { saveQuiz, setGameState } = useGame();
+  const { saveQuiz, setGameState, editingQuiz, setEditingQuiz } = useGame();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [successMessage, setSuccessMessage] = useState('');
-  
-  const [title, setTitle] = useState('');
-  const [questions, setQuestions] = useState<Omit<Question, 'id'>[]>([
-    {
-      text: '',
-      options: ['', '', '', ''],
-      correctAnswer: 0,
-    }
-  ]);
+
+  const [title, setTitle] = useState(editingQuiz?.title ?? '');
+  const [questions, setQuestions] = useState<Omit<Question, 'id'>[]>(
+    editingQuiz
+      ? editingQuiz.questions.map(({ text, options, correctAnswer }) => ({ text, options, correctAnswer }))
+      : [{ text: '', options: ['', '', '', ''], correctAnswer: 0 }]
+  );
   const [errors, setErrors] = useState<{ title?: string; questionIndex?: number; message?: string }>({});
 
   const handleSpreadsheetUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,9 +192,9 @@ export const CreateQuiz: React.FC = () => {
       }
     }
 
-    // Save
+    // Save — reuse existing id when editing so saveQuiz replaces it
     const finalQuiz: Quiz = {
-      id: 'quiz_' + Math.random().toString(36).substring(2, 9),
+      id: editingQuiz ? editingQuiz.id : 'quiz_' + Math.random().toString(36).substring(2, 9),
       title: title.trim(),
       questions: questions.map((q, idx) => ({
         ...q,
@@ -205,6 +203,7 @@ export const CreateQuiz: React.FC = () => {
     };
 
     saveQuiz(finalQuiz);
+    setEditingQuiz(null);
     setGameState('idle');
   };
 
@@ -213,15 +212,15 @@ export const CreateQuiz: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <button
-          onClick={() => setGameState('idle')}
+          onClick={() => { setEditingQuiz(null); setGameState('idle'); }}
           className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-800/50 transition-all"
         >
           <ArrowLeft size={18} />
           Back to Dashboard
         </button>
-        
+
         <h1 className="text-3xl font-extrabold bg-gradient-to-r from-quizPurple to-blue-400 bg-clip-text text-transparent">
-          Create Custom Quiz
+          {editingQuiz ? 'Edit Quiz' : 'Create Custom Quiz'}
         </h1>
         
         <button
@@ -442,7 +441,7 @@ export const CreateQuiz: React.FC = () => {
         {/* Save Bar Sticky */}
         <div className="flex justify-end gap-4 pt-4 pb-8">
           <button
-            onClick={() => setGameState('idle')}
+            onClick={() => { setEditingQuiz(null); setGameState('idle'); }}
             className="px-6 py-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-800 transition-all font-semibold"
           >
             Cancel

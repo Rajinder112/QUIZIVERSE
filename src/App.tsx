@@ -7,15 +7,17 @@ import { PlayerJoin } from './components/PlayerJoin';
 import { PlayerGameBoard } from './components/PlayerGameBoard';
 import { Leaderboard } from './components/Leaderboard';
 import { EndGame } from './components/EndGame';
-import { Play, Plus, Smartphone, Gamepad2, Info } from 'lucide-react';
+import { Play, Plus, Smartphone, Gamepad2, Info, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 const Dashboard: React.FC = () => {
-  const { 
-    quizzes, 
-    createLobby, 
-    setGameState, 
-    joinLobby 
+  const {
+    quizzes,
+    createLobby,
+    setGameState,
+    joinLobby,
+    deleteQuiz,
+    setEditingQuiz,
   } = useGame();
 
   const [pinInput, setPinInput] = useState('');
@@ -48,7 +50,7 @@ const Dashboard: React.FC = () => {
           QUIZ<span className="text-quizPurple">IVERSE</span>
         </h1>
         <p className="text-slate-400 max-w-md mx-auto text-sm md:text-base">
-          An interactive, gamified MCQ quiz platform inspired by Quizizz.
+          An interactive, gamified MCQ quiz platform.
         </p>
       </div>
 
@@ -138,7 +140,7 @@ const Dashboard: React.FC = () => {
 
           <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
             {quizzes.map((quiz) => (
-              <div 
+              <div
                 key={quiz.id}
                 className="bg-slate-950 border border-slate-850 rounded-xl p-4 flex items-center justify-between hover:border-slate-700 transition-all group"
               >
@@ -151,13 +153,41 @@ const Dashboard: React.FC = () => {
                   </span>
                 </div>
 
-                <button
-                  onClick={() => createLobby(quiz.id)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-quizPurple text-white text-xs font-bold rounded-lg shadow-md hover:bg-quizPurple-hover transition-all"
-                >
-                  <Play size={10} fill="currentColor" />
-                  Host
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Edit */}
+                  <button
+                    onClick={() => {
+                      setEditingQuiz(quiz);
+                      setGameState('create_quiz');
+                    }}
+                    className="p-2 text-slate-500 hover:text-quizPurple hover:bg-quizPurple/10 rounded-lg transition-all"
+                    title="Edit quiz"
+                  >
+                    <Pencil size={14} />
+                  </button>
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Delete "${quiz.title}"? This cannot be undone.`)) {
+                        deleteQuiz(quiz.id);
+                      }
+                    }}
+                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                    title="Delete quiz"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+
+                  {/* Host */}
+                  <button
+                    onClick={() => createLobby(quiz.id)}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-quizPurple text-white text-xs font-bold rounded-lg shadow-md hover:bg-quizPurple-hover transition-all"
+                  >
+                    <Play size={10} fill="currentColor" />
+                    Host
+                  </button>
+                </div>
               </div>
             ))}
           </div>

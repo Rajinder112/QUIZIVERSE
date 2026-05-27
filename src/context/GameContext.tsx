@@ -37,6 +37,7 @@ interface GameContextType {
   players: Player[];
   quizzes: Quiz[];
   currentQuiz: Quiz | null;
+  editingQuiz: Quiz | null;
   gameState: GameState;
   currentQuestionIndex: number;
   timer: number;
@@ -55,6 +56,8 @@ interface GameContextType {
   endGame: () => void;
   resetGame: () => void;
   saveQuiz: (quiz: Quiz) => void;
+  deleteQuiz: (id: string) => void;
+  setEditingQuiz: (quiz: Quiz | null) => void;
   setUserRole: (role: UserRole) => void;
   setGameState: (state: GameState) => void;
 }
@@ -145,6 +148,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [players, setPlayers] = useState<Player[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>(DEFAULT_QUIZZES);
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
+  const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
   const [gameState, setGameState] = useState<GameState>('idle');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [timer, setTimer] = useState<number>(30);
@@ -578,6 +582,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('quizizz_custom_quizzes', JSON.stringify(customOnly));
   };
 
+  const deleteQuiz = (id: string) => {
+    const updatedList = quizzes.filter(q => q.id !== id);
+    setQuizzes(updatedList);
+    const customOnly = updatedList.filter(
+      q => !DEFAULT_QUIZZES.some(dq => dq.id === q.id)
+    );
+    localStorage.setItem('quizizz_custom_quizzes', JSON.stringify(customOnly));
+  };
+
   const createLobby = (quizId: string) => {
     const quiz = quizzes.find((q) => q.id === quizId);
     if (!quiz) return;
@@ -859,6 +872,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         endGame,
         resetGame,
         saveQuiz,
+        deleteQuiz,
+        editingQuiz,
+        setEditingQuiz,
         setUserRole,
         setGameState,
       }}
