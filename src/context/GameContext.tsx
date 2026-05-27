@@ -25,6 +25,7 @@ export interface Player {
   lastQuestionAnswered: number | null;
   isBot?: boolean;
   active: boolean;
+  answers?: Record<number, { selectedOption: number; points: number; isCorrect: boolean }>;
 }
 
 export type GameState = 'idle' | 'create_quiz' | 'lobby' | 'playing' | 'leaderboard' | 'gameover';
@@ -63,7 +64,7 @@ interface GameContextType {
   setGameState: (state: GameState) => void;
   googleSheetUrls: Record<string, string>;
   saveGoogleSheetUrl: (quizId: string, url: string) => void;
-  exportScoreboardToSheet: (url: string, quizTitle: string, playersList: Player[]) => Promise<boolean>;
+  exportScoreboardToSheet: (url: string, quiz: Quiz, playersList: Player[]) => Promise<boolean>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -466,6 +467,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lastScoreEarned: 0,
         lastQuestionAnswered: null,
         active: true,
+        answers: {}
       };
       
       const nextPlayers = [...prev, newPlayer];
@@ -501,12 +503,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const timeSec = Math.min(Math.max(answerInfo.timeElapsed, 0), 30);
           const scoreEarned = correct ? Math.max(1000 - Math.round(timeSec * 20), 300) : 0;
 
+          const prevAnswers = player.answers || {};
+          const newAnswers = {
+            ...prevAnswers,
+            [stateRef.current.currentQuestionIndex]: {
+              selectedOption: answerInfo.optionIndex,
+              points: scoreEarned,
+              isCorrect: correct
+            }
+          };
+
           return {
             ...player,
             score: player.score + scoreEarned,
             lastAnsweredCorrectly: correct,
             lastScoreEarned: scoreEarned,
-            lastQuestionAnswered: stateRef.current.currentQuestionIndex
+            lastQuestionAnswered: stateRef.current.currentQuestionIndex,
+            answers: newAnswers
           };
         }
         return player;
@@ -687,6 +700,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lastQuestionAnswered: null,
         isBot: true,
         active: true,
+        answers: {}
       };
       
       const nextPlayers = [...prev, newBot];
@@ -723,7 +737,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         score: 0,
         lastAnsweredCorrectly: null,
         lastScoreEarned: 0,
-        lastQuestionAnswered: null
+        lastQuestionAnswered: null,
+        answers: {}
       }));
 
       // Broadcast starting game
@@ -811,15 +826,39 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const fillTimeoutsForCurrentQuestion = (prevPlayers: Player[]): Player[] => {
+    const qIndex = stateRef.current.currentQuestionIndex;
+    return prevPlayers.map((player) => {
+      const prevAnswers = player.answers || {};
+      if (prevAnswers[qIndex] === undefined) {
+        return {
+          ...player,
+          answers: {
+            ...prevAnswers,
+            [qIndex]: {
+              selectedOption: -1,
+              points: 0,
+              isCorrect: false
+            }
+          }
+        };
+      }
+      return player;
+    });
+  };
+
   const showLeaderboard = () => {
     if (userRole !== 'host') return;
 
     stopCountdown();
 
-    // Broadcast current scores
-    sendMessage('SHOW_LEADERBOARD', {
-      roomCode: stateRef.current.roomCode || roomCode,
-      players: stateRef.current.players || players
+    setPlayers((prev) => {
+      const nextPlayers = fillTimeoutsForCurrentQuestion(prev);
+      sendMessage('SHOW_LEADERBOARD', {
+        roomCode: stateRef.current.roomCode || roomCode,
+        players: nextPlayers
+      });
+      return nextPlayers;
     });
 
     setGameState('leaderboard');
@@ -830,10 +869,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     stopCountdown();
 
-    // Broadcast game over
-    sendMessage('GAME_OVER', {
-      roomCode: stateRef.current.roomCode || roomCode,
-      players: stateRef.current.players || players
+    setPlayers((prev) => {
+      const nextPlayers = fillTimeoutsForCurrentQuestion(prev);
+      sendMessage('GAME_OVER', {
+        roomCode: stateRef.current.roomCode || roomCode,
+        players: nextPlayers
+      });
+      return nextPlayers;
     });
 
     setGameState('gameover');
@@ -871,18 +913,33 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setFeedback(null);
   };
 
-  const exportScoreboardToSheet = async (url: string, quizTitle: string, playersList: Player[]): Promise<boolean> => {
+  const exportScoreboardToSheet = async (url: string, quiz: Quiz, playersList: Player[]): Promise<boolean> => {
     try {
       const sorted = [...playersList].sort((a, b) => b.score - a.score);
-      const scoreboard = sorted.map((p, idx) => ({
-        rank: idx + 1,
-        nickname: p.nickname,
-        score: p.score,
-        isBot: !!p.isBot
-      }));
+      const scoreboard = sorted.map((p, idx) => {
+        const answersList = quiz.questions.map((q, qIdx) => {
+          const ans = (p.answers && p.answers[qIdx]) || { selectedOption: -1, points: 0, isCorrect: false };
+          return {
+            questionNum: qIdx + 1,
+            questionText: q.text,
+            selectedOptionText: ans.selectedOption === -1 ? 'Timeout / No Answer' : (q.options[ans.selectedOption] || ''),
+            correctOptionText: q.options[q.correctAnswer] || '',
+            isCorrect: ans.isCorrect ? 'Yes' : 'No',
+            pointsEarned: ans.points
+          };
+        });
+
+        return {
+          rank: idx + 1,
+          nickname: p.nickname,
+          finalScore: p.score,
+          isBot: !!p.isBot,
+          answers: answersList
+        };
+      });
 
       const payload = {
-        quizTitle,
+        quizTitle: quiz.title,
         scoreboard
       };
 
@@ -903,8 +960,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return result.status === 'success';
     } catch (err) {
       console.error('Failed to export scoreboard', err);
-      // Note: Apps Script sometimes executes successfully but fails CORS on response redirect.
-      // We will return false to let the UI show an error or warning to check their sheet.
       return false;
     }
   };

@@ -148,7 +148,7 @@ export const EndGame: React.FC = () => {
       setExportState('loading');
       setErrorMessage('');
 
-      exportScoreboardToSheet(targetUrl, currentQuiz.title, players)
+      exportScoreboardToSheet(targetUrl, currentQuiz, players)
         .then((success) => {
           if (success) {
             setExportState('success');
@@ -166,6 +166,11 @@ export const EndGame: React.FC = () => {
 
   const handleExport = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentQuiz) {
+      setErrorMessage('No active quiz found.');
+      setExportState('error');
+      return;
+    }
     if (!sheetUrlInput.trim()) {
       setErrorMessage('Please enter a Web App URL.');
       setExportState('error');
@@ -181,13 +186,11 @@ export const EndGame: React.FC = () => {
     setErrorMessage('');
     
     // Save URL for future sessions
-    if (currentQuiz) {
-      saveGoogleSheetUrl(currentQuiz.id, sheetUrlInput.trim());
-    }
+    saveGoogleSheetUrl(currentQuiz.id, sheetUrlInput.trim());
 
     const success = await exportScoreboardToSheet(
       sheetUrlInput.trim(),
-      currentQuiz?.title || 'Untitled Quiz',
+      currentQuiz,
       players
     );
 
@@ -446,11 +449,26 @@ export const EndGame: React.FC = () => {
     var data = JSON.parse(e.postData.contents);
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow(["Timestamp", "Quiz Title", "Rank", "Player Nickname", "Score", "Is Bot?"]);
+      sheet.appendRow(["Timestamp", "Quiz Title", "Rank", "Player Nickname", "Final Score", "Question #", "Question Text", "Selected Option", "Correct Option", "Is Correct?", "Points Earned", "Is Bot?"]);
     }
     var timestamp = new Date();
     data.scoreboard.forEach(function(player) {
-      sheet.appendRow([timestamp, data.quizTitle, player.rank, player.nickname, player.score, player.isBot ? "Yes" : "No"]);
+      player.answers.forEach(function(ans) {
+        sheet.appendRow([
+          timestamp,
+          data.quizTitle,
+          player.rank,
+          player.nickname,
+          player.finalScore,
+          ans.questionNum,
+          ans.questionText,
+          ans.selectedOptionText,
+          ans.correctOptionText,
+          ans.isCorrect,
+          ans.pointsEarned,
+          player.isBot ? "Yes" : "No"
+        ]);
+      });
     });
     return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
