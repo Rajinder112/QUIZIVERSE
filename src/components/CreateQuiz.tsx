@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import type { Question, Quiz } from '../context/GameContext';
 import { Plus, Trash2, ArrowLeft, Save, AlertCircle, FileUp, Info } from 'lucide-react';
-import { read, utils } from 'xlsx';
+import { read, write, utils } from 'xlsx';
 
 export const CreateQuiz: React.FC = () => {
   const { saveQuiz, setGameState, editingQuiz, setEditingQuiz } = useGame();
@@ -12,10 +12,36 @@ export const CreateQuiz: React.FC = () => {
   const [title, setTitle] = useState(editingQuiz?.title ?? '');
   const [questions, setQuestions] = useState<Omit<Question, 'id'>[]>(
     editingQuiz
-      ? editingQuiz.questions.map(({ text, options, correctAnswer }) => ({ text, options, correctAnswer }))
-      : [{ text: '', options: ['', '', '', ''], correctAnswer: 0 }]
+      ? editingQuiz.questions.map(({ text, options, correctAnswer, image }) => ({ text, options, correctAnswer, image }))
+      : [{ text: '', options: ['', '', '', ''], correctAnswer: 0, image: '' }]
   );
   const [errors, setErrors] = useState<{ title?: string; questionIndex?: number; message?: string }>({});
+
+  const handleDownloadTemplate = () => {
+    // Define headers and one example row
+    const data = [
+      ['Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer', 'Image URL'],
+      ['Identify the logo of this popular frontend library/framework:', 'Vue', 'Angular', 'React', 'Svelte', 'React', 'https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg'],
+      ['Which Hook allows you to perform side effects in React?', 'useState', 'useContext', 'useEffect', 'useReducer', 'useEffect', '']
+    ];
+
+    // Create worksheet and workbook
+    const ws = utils.aoa_to_sheet(data);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, 'Quiz Template');
+
+    // Generate buffer (as excel file) and download it
+    const wbout = write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'quiziverse_template.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleSpreadsheetUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -46,6 +72,7 @@ export const CreateQuiz: React.FC = () => {
         const o3Idx = headers.findIndex((h: string) => h.includes('option 3') || h.includes('option c'));
         const o4Idx = headers.findIndex((h: string) => h.includes('option 4') || h.includes('option d'));
         const ansIdx = headers.findIndex((h: string) => h.includes('correct') || h.includes('answer'));
+        const imgIdx = headers.findIndex((h: string) => h.includes('image') || h.includes('figure') || h.includes('picture') || h.includes('url'));
 
         // Fallback to absolute indexes if headers not found by name
         const finalQIdx = qIdx !== -1 ? qIdx : 0;
@@ -54,6 +81,7 @@ export const CreateQuiz: React.FC = () => {
         const finalO3Idx = o3Idx !== -1 ? o3Idx : 3;
         const finalO4Idx = o4Idx !== -1 ? o4Idx : 4;
         const finalAnsIdx = ansIdx !== -1 ? ansIdx : 5;
+        const finalImgIdx = imgIdx !== -1 ? imgIdx : 6;
 
         const parsedQuestions: Omit<Question, 'id'>[] = [];
 
@@ -67,6 +95,7 @@ export const CreateQuiz: React.FC = () => {
           const opt3 = row[finalO3Idx] !== undefined ? String(row[finalO3Idx]).trim() : '';
           const opt4 = row[finalO4Idx] !== undefined ? String(row[finalO4Idx]).trim() : '';
           const rawAns = row[finalAnsIdx] !== undefined ? String(row[finalAnsIdx]).trim() : '';
+          const imgUrl = row[finalImgIdx] !== undefined ? String(row[finalImgIdx]).trim() : '';
 
           // Skip completely blank rows
           if (!qText && !opt1 && !opt2 && !opt3 && !opt4) continue;
@@ -105,7 +134,8 @@ export const CreateQuiz: React.FC = () => {
           parsedQuestions.push({
             text: qText,
             options: [opt1, opt2, opt3, opt4],
-            correctAnswer: correctAnswerIndex
+            correctAnswer: correctAnswerIndex,
+            image: imgUrl || undefined
           });
         }
 
@@ -138,6 +168,7 @@ export const CreateQuiz: React.FC = () => {
         text: '',
         options: ['', '', '', ''],
         correctAnswer: 0,
+        image: '',
       }
     ]);
   };
@@ -197,8 +228,11 @@ export const CreateQuiz: React.FC = () => {
       id: editingQuiz ? editingQuiz.id : 'quiz_' + Math.random().toString(36).substring(2, 9),
       title: title.trim(),
       questions: questions.map((q, idx) => ({
-        ...q,
-        id: `q_${idx}_${Date.now()}`
+        id: `q_${idx}_${Date.now()}`,
+        text: q.text,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        image: q.image?.trim() ? q.image.trim() : undefined
       }))
     };
 
@@ -280,7 +314,7 @@ export const CreateQuiz: React.FC = () => {
               </div>
             </div>
             
-            <div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -290,8 +324,15 @@ export const CreateQuiz: React.FC = () => {
               />
               <button
                 type="button"
+                onClick={handleDownloadTemplate}
+                className="flex items-center gap-2 px-4 py-2.5 bg-quizPurple/10 border border-quizPurple/20 text-quizPurple hover:bg-quizPurple hover:text-white rounded-xl transition-all text-sm font-semibold justify-center cursor-pointer"
+              >
+                Download Template
+              </button>
+              <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 border border-slate-800 text-slate-200 hover:text-white hover:border-slate-700 hover:bg-slate-800/80 rounded-xl transition-all text-sm font-semibold w-full md:w-auto justify-center cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 border border-slate-800 text-slate-200 hover:text-white hover:border-slate-700 hover:bg-slate-800/80 rounded-xl transition-all text-sm font-semibold justify-center cursor-pointer"
               >
                 <FileUp size={16} />
                 Choose File
@@ -309,8 +350,9 @@ export const CreateQuiz: React.FC = () => {
               <code className="text-quizPurple font-bold mx-1 font-mono">Option 1</code>, 
               <code className="text-quizPurple font-bold mx-1 font-mono">Option 2</code>, 
               <code className="text-quizPurple font-bold mx-1 font-mono">Option 3</code>, 
-              <code className="text-quizPurple font-bold mx-1 font-mono">Option 4</code>, and 
-              <code className="text-quizPurple font-bold mx-1 font-mono">Correct Answer</code>. 
+              <code className="text-quizPurple font-bold mx-1 font-mono">Option 4</code>, 
+              <code className="text-quizPurple font-bold mx-1 font-mono">Correct Answer</code>, and 
+              <code className="text-quizPurple font-bold mx-1 font-mono">Image URL</code> (optional). 
               <span className="block mt-1.5 font-semibold text-slate-350">
                 Correct Answer can be a number (1-4), index (0-3), letter (A-D), or the matching option text itself.
               </span>
@@ -358,6 +400,82 @@ export const CreateQuiz: React.FC = () => {
                   }}
                   className="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 focus:border-quizPurple focus:ring-1 focus:ring-quizPurple rounded-xl text-white outline-none transition-all"
                 />
+              </div>
+
+              {/* Question Image (Optional) */}
+              <div className="mb-6 bg-slate-950/40 p-4 rounded-xl border border-slate-900/60">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+                  Question Image / Figure (Optional)
+                </label>
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                  <div className="flex-1 w-full">
+                    <input
+                      type="text"
+                      placeholder="Paste image URL (e.g. https://example.com/figure.png)"
+                      value={q.image ?? ''}
+                      onChange={(e) => {
+                        const updated = [...questions];
+                        updated[qIndex].image = e.target.value;
+                        setQuestions(updated);
+                      }}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-quizPurple focus:ring-1 focus:ring-quizPurple rounded-lg text-slate-200 outline-none transition-all text-xs"
+                    />
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] text-slate-500">Or upload:</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id={`upload-q-img-${qIndex}`}
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (evt) => {
+                            const base64 = evt.target?.result as string;
+                            const updated = [...questions];
+                            updated[qIndex].image = base64;
+                            setQuestions(updated);
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                      <label
+                        htmlFor={`upload-q-img-${qIndex}`}
+                        className="cursor-pointer text-[10px] bg-slate-900 border border-slate-800 text-slate-350 hover:text-white px-2 py-1 rounded hover:bg-slate-850 transition-all font-semibold"
+                      >
+                        Choose local image
+                      </label>
+                      
+                      {q.image && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...questions];
+                            updated[qIndex].image = '';
+                            setQuestions(updated);
+                          }}
+                          className="text-[10px] text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+                        >
+                          Remove image
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {q.image && (
+                    <div className="w-16 h-16 rounded-lg bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center shrink-0">
+                      <img
+                        src={q.image}
+                        alt="Question figure preview"
+                        className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Options */}

@@ -202,6 +202,15 @@ export const PlayerGameBoard: React.FC = () => {
             <h2 className="text-xl md:text-2xl font-bold text-white leading-relaxed">
               {question.text}
             </h2>
+            {question.image && (
+              <div className="mt-4 max-w-sm w-full mx-auto bg-slate-950/80 border border-slate-850 rounded-2xl p-2.5 flex items-center justify-center shadow-inner overflow-hidden animate-scale-in">
+                <img
+                  src={question.image}
+                  alt="Identify the figure"
+                  className="max-h-48 md:max-h-56 w-auto object-contain rounded-xl"
+                />
+              </div>
+            )}
           </div>
         </div>
 

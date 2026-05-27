@@ -7,6 +7,7 @@ export interface Question {
   text: string;
   options: string[];
   correctAnswer: number; // 0-3 index
+  image?: string; // base64 string or image URL
 }
 
 export interface Quiz {
@@ -104,6 +105,13 @@ const DEFAULT_QUIZZES: Quiz[] = [
           'arrow function() {}'
         ],
         correctAnswer: 1,
+      },
+      {
+        id: 'q6',
+        text: 'Identify the logo of this popular frontend library/framework:',
+        options: ['Vue', 'Angular', 'React', 'Svelte'],
+        correctAnswer: 2,
+        image: 'https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg'
       }
     ],
   },

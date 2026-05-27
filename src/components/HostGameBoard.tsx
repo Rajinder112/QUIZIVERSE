@@ -95,13 +95,23 @@ export const HostGameBoard: React.FC = () => {
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-quizPurple/5 rounded-full blur-3xl" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl" />
 
-        <span className="px-4 py-1 rounded-full bg-slate-950 text-slate-500 text-xs font-bold uppercase tracking-wider border border-slate-850 mb-6">
+        <span className="px-4 py-1 rounded-full bg-slate-950 text-slate-500 text-xs font-bold uppercase tracking-wider border border-slate-850 mb-4">
           MCQ Question Prompt
         </span>
 
-        <h1 className="text-2xl md:text-4xl font-extrabold text-white leading-relaxed max-w-4xl">
+        <h1 className="text-2xl md:text-3xl font-extrabold text-white leading-relaxed max-w-4xl">
           {question.text}
         </h1>
+
+        {question.image && (
+          <div className="mt-6 max-w-md w-full mx-auto bg-slate-950/80 border border-slate-850 rounded-2xl p-3 flex items-center justify-center shadow-inner overflow-hidden animate-scale-in">
+            <img
+              src={question.image}
+              alt="Identify the figure"
+              className="max-h-60 md:max-h-72 w-auto object-contain rounded-xl"
+            />
+          </div>
+        )}
       </div>
 
       {/* Options Grid */}
