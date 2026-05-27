@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext';
 import confetti from 'canvas-confetti';
-import { Home, Trophy, Sparkles } from 'lucide-react';
+import { Home, Trophy, Sparkles, FileSpreadsheet, ChevronDown, ChevronUp, Check, AlertCircle, Loader2 } from 'lucide-react';
 
 const DancingCharacter: React.FC<{ place: '1st' | '2nd' | '3rd' }> = ({ place }) => {
   const isGold = place === '1st';
@@ -116,7 +116,53 @@ const DancingCharacter: React.FC<{ place: '1st' | '2nd' | '3rd' }> = ({ place })
 };
 
 export const EndGame: React.FC = () => {
-  const { players, resetGame } = useGame();
+  const { 
+    players, 
+    resetGame, 
+    userRole, 
+    currentQuiz, 
+    googleSheetUrl, 
+    setGoogleSheetUrl, 
+    exportScoreboardToSheet 
+  } = useGame();
+
+  const [sheetUrlInput, setSheetUrlInput] = useState(googleSheetUrl);
+  const [exportState, setExportState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  const handleExport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sheetUrlInput.trim()) {
+      setErrorMessage('Please enter a Web App URL.');
+      setExportState('error');
+      return;
+    }
+    if (!sheetUrlInput.startsWith('https://script.google.com/')) {
+      setErrorMessage('Must be a valid Google Apps Script Web App URL (starts with https://script.google.com/)');
+      setExportState('error');
+      return;
+    }
+
+    setExportState('loading');
+    setErrorMessage('');
+    
+    // Save URL for future sessions
+    setGoogleSheetUrl(sheetUrlInput.trim());
+
+    const success = await exportScoreboardToSheet(
+      sheetUrlInput.trim(),
+      currentQuiz?.title || 'Untitled Quiz',
+      players
+    );
+
+    if (success) {
+      setExportState('success');
+    } else {
+      setErrorMessage('Failed to export. Check your Apps Script deployment and make sure it allows "Anyone" to access it.');
+      setExportState('error');
+    }
+  };
 
   // Sort players descending by score
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
@@ -268,6 +314,132 @@ export const EndGame: React.FC = () => {
                 <span className="text-sm font-bold text-slate-400">{player.score} pts</span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Google Sheets Export Card (Only for Host) */}
+      {userRole === 'host' && (
+        <div className="max-w-xl mx-auto glass-card p-6 border-slate-800 mb-12 animate-fade-in delay-200">
+          <div className="flex items-center gap-3 border-b border-slate-900/60 pb-4 mb-4">
+            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+              <FileSpreadsheet size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                Export Scoreboard to Google Sheet
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                Log this tournament's rankings and final scores directly to your spreadsheet.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleExport} className="space-y-4">
+            {exportState === 'success' && (
+              <div className="p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-xl flex items-center gap-2 text-emerald-300 text-xs">
+                <Check className="text-emerald-400 shrink-0" size={16} />
+                <span>Scoreboard successfully exported to Google Sheets!</span>
+              </div>
+            )}
+
+            {exportState === 'error' && (
+              <div className="p-3 bg-red-950/60 border border-red-500/40 rounded-xl flex items-center gap-2 text-red-300 text-xs">
+                <AlertCircle className="text-red-400 shrink-0" size={16} />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                placeholder="Paste Apps Script Web App URL"
+                value={sheetUrlInput}
+                onChange={(e) => {
+                  setSheetUrlInput(e.target.value);
+                  if (exportState === 'error' || exportState === 'success') {
+                    setExportState('idle');
+                  }
+                }}
+                disabled={exportState === 'loading'}
+                className="w-full px-4 py-2.5 bg-slate-950/80 border border-slate-800 focus:border-quizPurple focus:ring-1 focus:ring-quizPurple rounded-xl text-white outline-none text-xs transition-all placeholder:text-slate-700"
+              />
+              <button
+                type="submit"
+                disabled={exportState === 'loading'}
+                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-850 disabled:text-slate-600 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:scale-[1.01] active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+              >
+                {exportState === 'loading' ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <FileSpreadsheet size={14} />
+                    Export Now
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {/* Instructions Panel Toggle */}
+          <div className="mt-4 border-t border-slate-950/60 pt-3">
+            <button
+              onClick={() => setShowInstructions(!showInstructions)}
+              className="flex items-center justify-between w-full text-slate-500 hover:text-slate-400 text-xs font-bold transition-colors cursor-pointer"
+            >
+              <span>Setup Instructions (1-Minute Guide)</span>
+              {showInstructions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+
+            {showInstructions && (
+              <div className="mt-3 text-slate-400 text-xs leading-relaxed space-y-3 bg-slate-950/50 p-4 rounded-xl border border-slate-900 animate-slide-up">
+                <ol className="list-decimal pl-4 space-y-2">
+                  <li>
+                    Open or create a <a href="https://sheets.new" target="_blank" rel="noopener noreferrer" className="text-quizPurple hover:underline font-semibold">Google Spreadsheet</a>.
+                  </li>
+                  <li>
+                    Go to **Extensions** &rarr; **Apps Script**.
+                  </li>
+                  <li>
+                    Replace the default script contents with the following code block:
+                    <pre className="mt-1.5 p-3 bg-slate-950 border border-slate-850 rounded-lg overflow-x-auto text-[10px] text-quizPurple font-mono max-h-48">
+{`function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["Timestamp", "Quiz Title", "Rank", "Player Nickname", "Score", "Is Bot?"]);
+    }
+    var timestamp = new Date();
+    data.scoreboard.forEach(function(player) {
+      sheet.appendRow([timestamp, data.quizTitle, player.rank, player.nickname, player.score, player.isBot ? "Yes" : "No"]);
+    });
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`}
+                    </pre>
+                  </li>
+                  <li>
+                    Click **Deploy** (top right) &rarr; **New deployment**.
+                  </li>
+                  <li>
+                    Select type **Web app**. Change settings to:
+                    <ul className="list-disc pl-4 mt-1 font-semibold text-slate-350">
+                      <li>**Execute as:** Me</li>
+                      <li>**Who has access:** Anyone</li>
+                    </ul>
+                  </li>
+                  <li>
+                    Click **Deploy**, approve authorization, copy the **Web App URL**, and paste it in the input field above!
+                  </li>
+                </ol>
+              </div>
+            )}
           </div>
         </div>
       )}

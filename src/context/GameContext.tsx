@@ -61,6 +61,9 @@ interface GameContextType {
   setEditingQuiz: (quiz: Quiz | null) => void;
   setUserRole: (role: UserRole) => void;
   setGameState: (state: GameState) => void;
+  googleSheetUrl: string;
+  setGoogleSheetUrl: (url: string) => void;
+  exportScoreboardToSheet: (url: string, quizTitle: string, playersList: Player[]) => Promise<boolean>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -163,6 +166,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [answersCount, setAnswersCount] = useState<number>(0);
   const [hasAnswered, setHasAnswered] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
+  const [googleSheetUrl, setGoogleSheetUrlState] = useState<string>(() => {
+    return localStorage.getItem('quiziverse_google_sheet_url') ?? '';
+  });
+
+  const setGoogleSheetUrl = (url: string) => {
+    setGoogleSheetUrlState(url);
+    localStorage.setItem('quiziverse_google_sheet_url', url);
+  };
   const [feedback, setFeedback] = useState<GameContextType['feedback']>(null);
 
   // References to keep state available in event handlers and timers
@@ -852,6 +863,44 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setFeedback(null);
   };
 
+  const exportScoreboardToSheet = async (url: string, quizTitle: string, playersList: Player[]): Promise<boolean> => {
+    try {
+      const sorted = [...playersList].sort((a, b) => b.score - a.score);
+      const scoreboard = sorted.map((p, idx) => ({
+        rank: idx + 1,
+        nickname: p.nickname,
+        score: p.score,
+        isBot: !!p.isBot
+      }));
+
+      const payload = {
+        quizTitle,
+        scoreboard
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const result = await response.json();
+      return result.status === 'success';
+    } catch (err) {
+      console.error('Failed to export scoreboard', err);
+      // Note: Apps Script sometimes executes successfully but fails CORS on response redirect.
+      // We will return false to let the UI show an error or warning to check their sheet.
+      return false;
+    }
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -885,6 +934,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setEditingQuiz,
         setUserRole,
         setGameState,
+        googleSheetUrl,
+        setGoogleSheetUrl,
+        exportScoreboardToSheet,
       }}
     >
       {children}
