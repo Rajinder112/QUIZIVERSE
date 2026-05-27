@@ -115,11 +115,26 @@ Error generating stack: `+e.message+`
     var data = JSON.parse(e.postData.contents);
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow(["Timestamp", "Quiz Title", "Rank", "Player Nickname", "Score", "Is Bot?"]);
+      sheet.appendRow(["Timestamp", "Quiz Title", "Rank", "Player Nickname", "Final Score", "Question #", "Question Text", "Selected Option", "Correct Option", "Is Correct?", "Points Earned", "Is Bot?"]);
     }
     var timestamp = new Date();
     data.scoreboard.forEach(function(player) {
-      sheet.appendRow([timestamp, data.quizTitle, player.rank, player.nickname, player.score, player.isBot ? "Yes" : "No"]);
+      player.answers.forEach(function(ans) {
+        sheet.appendRow([
+          timestamp,
+          data.quizTitle,
+          player.rank,
+          player.nickname,
+          player.finalScore,
+          ans.questionNum,
+          ans.questionText,
+          ans.selectedOptionText,
+          ans.correctOptionText,
+          ans.isCorrect,
+          ans.pointsEarned,
+          player.isBot ? "Yes" : "No"
+        ]);
+      });
     });
     return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
